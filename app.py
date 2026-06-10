@@ -65,7 +65,8 @@ st.markdown(
 
 # ── Pages with live implementations ──────────────────────────────────────────
 NAVIGABLE_PAGES = {
-    "Sales Trends": "pages/01_Sales_Trends.py",
+    "Sales Trends":                    "pages/01_Sales_Trends.py",
+    "Quality of Sales by Tenant & Store": "pages/02_Quality_of_Sales.py",
 }
 
 # ── Section card data ─────────────────────────────────────────────────────────

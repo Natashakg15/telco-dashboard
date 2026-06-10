@@ -161,19 +161,22 @@ for idx, section in enumerate(SECTIONS):
     col = cols[idx % 3]
     accent = section["accent"]
 
-    # Navigable pages in this section (strip leading spaces for sub-items)
-    nav_in_section = [
-        (p.strip(), NAVIGABLE_PAGES[p.strip()])
-        for p in section["pages"]
-        if p.strip() in NAVIGABLE_PAGES
-    ]
+    def page_item_html(p: str) -> str:
+        name = p.strip()
+        is_sub = p.startswith(" ")
+        if name in NAVIGABLE_PAGES:
+            # Derive Streamlit's URL path from the filename
+            # e.g. "pages/01_Sales_Trends.py" → "/Sales_Trends"
+            url = "/" + NAVIGABLE_PAGES[name].split("/")[-1].replace(".py", "").lstrip("0123456789_")
+            return (
+                f"<li style='font-size:13px; padding:2px 0;'>"
+                f"<a href='{url}' target='_self' style='color:{HYPERMINT}; font-weight:600;"
+                f"text-decoration:none;'>{name}</a></li>"
+            )
+        color = "#aaa" if is_sub else ZERO_WHITE
+        return f"<li style='color:{color}; font-size:13px; padding:2px 0;'>{name}</li>"
 
-    pages_html = "".join(
-        f"<li style='color:{'#aaa' if p.startswith(' ') else (HYPERMINT if p.strip() in NAVIGABLE_PAGES else ZERO_WHITE)};"
-        f"font-weight:{'600' if p.strip() in NAVIGABLE_PAGES else '400'};"
-        f"font-size:13px; padding:2px 0;'>{p.strip()}</li>"
-        for p in section["pages"]
-    )
+    pages_html = "".join(page_item_html(p) for p in section["pages"])
 
     with col:
         st.markdown(
@@ -184,7 +187,7 @@ for idx, section in enumerate(SECTIONS):
                 border-top: 3px solid {accent};
                 border-radius:12px;
                 padding:20px 22px 22px 22px;
-                margin-bottom:{"8px" if nav_in_section else "20px"};
+                margin-bottom:20px;
                 min-height:280px;
             '>
                 <div style='display:flex; align-items:center; gap:10px; margin-bottom:12px;'>
@@ -199,10 +202,6 @@ for idx, section in enumerate(SECTIONS):
             """,
             unsafe_allow_html=True,
         )
-        for label, page_file in nav_in_section:
-            st.page_link(page_file, label=f"→ Open {label}")
-        if nav_in_section:
-            st.markdown("<div style='margin-bottom:12px;'></div>", unsafe_allow_html=True)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(

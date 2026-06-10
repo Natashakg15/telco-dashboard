@@ -34,7 +34,8 @@ def load_tenants():
         WHERE TENANT IS NOT NULL AND TENANT != ''
         ORDER BY TENANT
     """)
-    return df["TENANT"].tolist()
+    col = "TENANT" if "TENANT" in df.columns else df.columns[0]
+    return df[col].tolist()
 
 all_tenants = load_tenants()
 
@@ -72,7 +73,7 @@ prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
 
 @st.cache_data(ttl=1800, show_spinner="Loading trend data…")
 def load_daily(tenant_filter: str):
-    return run_query(f"""
+    df = run_query(f"""
         SELECT
             ACTIVATION_DATE,
             COUNT(*) AS ACTIVATIONS
@@ -82,6 +83,8 @@ def load_daily(tenant_filter: str):
         GROUP BY 1
         ORDER BY 1
     """)
+    df.columns = [c.upper() for c in df.columns]
+    return df
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_tables_data():

@@ -74,8 +74,8 @@ def load_tenants():
         WHERE TENANT IS NOT NULL AND TENANT != ''
         ORDER BY TENANT
     """)
-    col = "TENANT" if "TENANT" in df.columns else df.columns[0]
-    return df[col].tolist()
+    df.columns = [c.upper() for c in df.columns]
+    return df["TENANT"].tolist()
 
 all_raw_tenants = load_tenants()
 
@@ -302,6 +302,10 @@ with row2_c2:
 # ─────────────────────────────────────────────────────────────────────────────
 def group_and_sort(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
     d = df.copy()
+    d.columns = [c.upper() for c in d.columns]
+    value_col = value_col.upper()
+    if "TENANT" not in d.columns or value_col not in d.columns:
+        return pd.DataFrame(columns=["Tenant", "Activations"])
     d["Tenant"] = d["TENANT"].apply(map_tenant_group)
     grouped = (
         d.groupby("Tenant", as_index=False)[value_col]

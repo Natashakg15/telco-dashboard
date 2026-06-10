@@ -24,7 +24,47 @@ inject_css()
 page_header("Sales Trends", badge="Sales")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. Tenant list (for filter)
+# Tenant grouping logic
+# ─────────────────────────────────────────────────────────────────────────────
+def map_tenant_group(name: str) -> str:
+    n = name or ""
+    if "Build It" in n or "Build IT" in n or "Build it" in n:
+        return "Build It"
+    if "Midas" in n or "KR Motor Spares" in n or "ACA Auto parts" in n:
+        return "Midas"
+    if "Mica" in n or "Greenfields Hardware" in n:
+        return "Mica"
+    if "Spargs" in n or "Savemor" in n or "Spar" in n:
+        return "Spar Retail"
+    if "Fashion" in n:
+        return "Fashion Fusion"
+    if "Progas" in n:
+        return "Progas"
+    if "Aheers" in n:
+        return "Aheers"
+    if n == "The Unlimited":
+        return "The Unlimited"
+    if "Ladysmith Office National" in n:
+        return "Ladysmith Office National"
+    if "OnAir" in n or "On Air" in n:
+        return "OnAir"
+    if "Pet Pool" in n:
+        return "Pet Pool & Home"
+    if n == "Spot Mobile":
+        return "Spot Mobile"
+    if "uConnect App" in n or "uConnect Digital" in n:
+        return "Spot Connect App & Digital"
+    return "Other Tenants"
+
+
+DEFINED_GROUPS = [
+    "Spar Retail", "Build It", "Midas", "Mica", "Fashion Fusion",
+    "Progas", "Aheers", "The Unlimited", "Ladysmith Office National",
+    "OnAir", "Pet Pool & Home", "Spot Mobile", "Spot Connect App & Digital",
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Raw tenant list → derive grouped options for the filter
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_tenants():
@@ -37,10 +77,24 @@ def load_tenants():
     col = "TENANT" if "TENANT" in df.columns else df.columns[0]
     return df[col].tolist()
 
-all_tenants = load_tenants()
+all_raw_tenants = load_tenants()
+
+# Build group → [raw tenants] reverse map
+group_to_raw: dict[str, list[str]] = {}
+for t in all_raw_tenants:
+    g = map_tenant_group(t)
+    group_to_raw.setdefault(g, []).append(t)
+
+# Sidebar options: named groups that actually have data, sorted; Other Tenants last
+available_groups = sorted(
+    [g for g in DEFINED_GROUPS if g in group_to_raw],
+    key=lambda x: DEFINED_GROUPS.index(x),
+)
+if "Other Tenants" in group_to_raw:
+    available_groups.append("Other Tenants")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Tenant filter (only affects bar charts)
+# 2. Tenant group filter (affects bar charts)
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(
@@ -50,21 +104,23 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     st.caption("Filters the trend charts only. Tables are unaffected.")
-    selected_tenants = st.multiselect(
-        "Select tenants",
-        options=all_tenants,
+    selected_groups = st.multiselect(
+        "Select tenant groups",
+        options=available_groups,
         default=[],
         placeholder="All tenants",
         label_visibility="collapsed",
     )
 
-tenant_clause = (
-    f"AND TENANT IN ({', '.join(repr(t) for t in selected_tenants)})"
-    if selected_tenants else ""
-)
+# Translate selected groups back to raw tenant names for SQL
+if selected_groups:
+    raw_for_filter = [t for g in selected_groups for t in group_to_raw.get(g, [])]
+    tenant_clause = f"AND TENANT IN ({', '.join(repr(t) for t in raw_for_filter)})"
+else:
+    tenant_clause = ""
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. Load trend data (filtered by tenant selection)
+# 3. Load trend data  — counts distinct ACCOUNT_NUMBER per ACTIVATION_DATE
 # ─────────────────────────────────────────────────────────────────────────────
 today = date.today()
 last_7_start  = today - timedelta(days=6)
@@ -76,7 +132,7 @@ def load_daily(tenant_filter: str):
     df = run_query(f"""
         SELECT
             ACTIVATION_DATE,
-            COUNT(*) AS ACTIVATIONS
+            COUNT(DISTINCT ACCOUNT_NUMBER) AS ACTIVATIONS
         FROM {MERGE_TABLE}
         WHERE ACTIVATION_DATE >= DATEADD(month, -13, CURRENT_DATE())
           {tenant_filter}
@@ -92,17 +148,16 @@ def load_tables_data():
     return run_query(f"""
         SELECT
             TENANT,
-            SUM(CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
+            COUNT(DISTINCT CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
                           = DATE_TRUNC('month', DATEADD(month,-1,CURRENT_DATE()))
-                     THEN 1 ELSE 0 END) AS LAST_MONTH,
-            SUM(CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
+                     THEN ACCOUNT_NUMBER END) AS LAST_MONTH,
+            COUNT(DISTINCT CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
                           = DATE_TRUNC('month', CURRENT_DATE())
-                     THEN 1 ELSE 0 END) AS THIS_MONTH
+                     THEN ACCOUNT_NUMBER END) AS THIS_MONTH
         FROM {MERGE_TABLE}
         WHERE TENANT IS NOT NULL AND TENANT != ''
           AND ACTIVATION_DATE >= DATE_TRUNC('month', DATEADD(month,-1,CURRENT_DATE()))
         GROUP BY 1
-        ORDER BY LAST_MONTH DESC
     """)
 
 daily_df   = load_daily(tenant_clause)
@@ -113,7 +168,6 @@ daily_df["ACTIVATION_DATE"] = pd.to_datetime(daily_df["ACTIVATION_DATE"])
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Derived aggregations
 # ─────────────────────────────────────────────────────────────────────────────
-# Weekly
 weekly_df = (
     daily_df.set_index("ACTIVATION_DATE")
     .resample("W-MON", label="left", closed="left")["ACTIVATIONS"]
@@ -122,7 +176,6 @@ weekly_df = (
     .rename(columns={"ACTIVATION_DATE": "WEEK_START"})
 )
 
-# Monthly
 monthly_df = (
     daily_df.set_index("ACTIVATION_DATE")
     .resample("MS")["ACTIVATIONS"]
@@ -131,7 +184,6 @@ monthly_df = (
     .rename(columns={"ACTIVATION_DATE": "MONTH_START"})
 )
 
-# Last 7 days
 last7_df = daily_df[daily_df["ACTIVATION_DATE"] >= pd.Timestamp(last_7_start)]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -192,10 +244,10 @@ def spot_bar(x, y, title, x_label="", colour=HYPERMINT, last_n=None):
 # ─────────────────────────────────────────────────────────────────────────────
 filter_note = (
     f"<span style='color:{HIGHVOLT_ORANGE};font-size:12px;'>⬟ Filtered: "
-    + ", ".join(selected_tenants[:3])
-    + ("…" if len(selected_tenants) > 3 else "")
+    + ", ".join(selected_groups[:3])
+    + ("…" if len(selected_groups) > 3 else "")
     + "</span>"
-    if selected_tenants
+    if selected_groups
     else ""
 )
 if filter_note:
@@ -244,64 +296,13 @@ with row2_c2:
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. Tenant league tables — NOT affected by filter
+# 8. Tenant league tables — grouped, Other Tenants always last
 # ─────────────────────────────────────────────────────────────────────────────
-
-def map_tenant_group(name: str) -> str:
-    """Group raw tenant names into canonical buckets, matching Power Query logic."""
-    n = name or ""
-    if "Build It" in n or "Build IT" in n or "Build it" in n:
-        return "Build It"
-    if "Mica" in n:
-        return "Mica"
-    if "Midas" in n or "ACA" in n or "Greenfields" in n:
-        return "Midas"
-    if "Pet Pool & Home" in n:
-        return "Pet Pool & Home"
-    if "Progas" in n:
-        return "Progas"
-    if "Ladysmith Office National" in n:
-        return "Ladysmith Office National"
-    if "Spargs" in n or "Savemor" in n or "Spar" in n:
-        return "Spar Retail"
-    if "Fashion" in n:
-        return "Fashion Fusion"
-    if n == "The Unlimited":
-        return "The Unlimited"
-    if n == "Halaala":
-        return "Halaala"
-    if n == "Mobile Store":
-        return "Mobile Store"
-    if n == "Spot Airtime Rewards" or "Deals Direct" in n:
-        return "NRP"
-    if n == "OnAir":
-        return "OnAir"
-    if n == "OnAir Connect 50":
-        return "OnAir Non Sales"
-    if "AllLife" in n:
-        return "AllLife"
-    if n in ("uConnect App", "uConnect Digital"):
-        return "uConnect App & Digital"
-    if "Aheers" in n:
-        return "Aheers"
-    if n == "Spot Mobile":
-        return "Spot Mobile"
-    if n == "Me&You":
-        return "Me&You"
-    if n == "KR Motor Spares Bothas Hill" or n == "KR Motor Spares - Midas" or n == "ACA Auto parts":
-        return "Midas"
-    if n == "Greenfields Hardware":
-        return "Mica"
-    if "On Tap" in n:
-        return "On Tap"
-    return "Other Tenants"
-
-
 def group_and_sort(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
-    df = df.copy()
-    df["Tenant"] = df["TENANT"].apply(map_tenant_group)
+    d = df.copy()
+    d["Tenant"] = d["TENANT"].apply(map_tenant_group)
     grouped = (
-        df.groupby("Tenant", as_index=False)[value_col]
+        d.groupby("Tenant", as_index=False)[value_col]
         .sum()
         .rename(columns={value_col: "Activations"})
     )
@@ -327,13 +328,9 @@ this_month_label = today.strftime("%B %Y")
 last_month_by_tenant = group_and_sort(tables_df, "LAST_MONTH")
 this_month_by_tenant = group_and_sort(tables_df, "THIS_MONTH")
 
-# Validate: the totals in these tables should match the monthly bar chart values
-# (both come from the same unfiltered query)
-
 tc1, spacer, tc2 = st.columns([1, 0.05, 1])
 
 def style_table(df: pd.DataFrame, accent: str) -> str:
-    """Return a simple HTML table styled to Spot CI."""
     rows = ""
     for rank, row in enumerate(df.itertuples(), 1):
         medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, f"{rank}.")
@@ -367,7 +364,7 @@ with tc1:
         unsafe_allow_html=True,
     )
     st.markdown(
-        style_table(last_month_by_tenant.head(20), SONIC_BLUE),
+        style_table(last_month_by_tenant, SONIC_BLUE),
         unsafe_allow_html=True,
     )
 
@@ -378,6 +375,6 @@ with tc2:
         unsafe_allow_html=True,
     )
     st.markdown(
-        style_table(this_month_by_tenant.head(20), HYPERMINT),
+        style_table(this_month_by_tenant, HYPERMINT),
         unsafe_allow_html=True,
     )

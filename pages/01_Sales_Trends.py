@@ -246,6 +246,72 @@ with row2_c2:
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. Tenant league tables — NOT affected by filter
 # ─────────────────────────────────────────────────────────────────────────────
+
+def map_tenant_group(name: str) -> str:
+    """Group raw tenant names into canonical buckets, matching Power Query logic."""
+    n = name or ""
+    if "Build It" in n or "Build IT" in n or "Build it" in n:
+        return "Build It"
+    if "Mica" in n:
+        return "Mica"
+    if "Midas" in n or "ACA" in n or "Greenfields" in n:
+        return "Midas"
+    if "Pet Pool & Home" in n:
+        return "Pet Pool & Home"
+    if "Progas" in n:
+        return "Progas"
+    if "Ladysmith Office National" in n:
+        return "Ladysmith Office National"
+    if "Spargs" in n or "Savemor" in n or "Spar" in n:
+        return "Spar Retail"
+    if "Fashion" in n:
+        return "Fashion Fusion"
+    if n == "The Unlimited":
+        return "The Unlimited"
+    if n == "Halaala":
+        return "Halaala"
+    if n == "Mobile Store":
+        return "Mobile Store"
+    if n == "Spot Airtime Rewards" or "Deals Direct" in n:
+        return "NRP"
+    if n == "OnAir":
+        return "OnAir"
+    if n == "OnAir Connect 50":
+        return "OnAir Non Sales"
+    if "AllLife" in n:
+        return "AllLife"
+    if n in ("uConnect App", "uConnect Digital"):
+        return "uConnect App & Digital"
+    if "Aheers" in n:
+        return "Aheers"
+    if n == "Spot Mobile":
+        return "Spot Mobile"
+    if n == "Me&You":
+        return "Me&You"
+    if n == "KR Motor Spares Bothas Hill" or n == "KR Motor Spares - Midas" or n == "ACA Auto parts":
+        return "Midas"
+    if n == "Greenfields Hardware":
+        return "Mica"
+    if "On Tap" in n:
+        return "On Tap"
+    return "Other Tenants"
+
+
+def group_and_sort(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
+    df = df.copy()
+    df["Tenant"] = df["TENANT"].apply(map_tenant_group)
+    grouped = (
+        df.groupby("Tenant", as_index=False)[value_col]
+        .sum()
+        .rename(columns={value_col: "Activations"})
+    )
+    others = grouped[grouped["Tenant"] == "Other Tenants"]
+    rest = grouped[grouped["Tenant"] != "Other Tenants"].sort_values("Activations", ascending=False)
+    result = pd.concat([rest, others], ignore_index=True)
+    result.index = range(1, len(result) + 1)
+    return result
+
+
 st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
 st.markdown(
     f"<h3 style='color:{HYPERMINT}; font-size:15px; margin-bottom:4px;'>"
@@ -258,23 +324,8 @@ st.markdown(
 prev_month_label = (month_start - timedelta(days=1)).strftime("%B %Y")
 this_month_label = today.strftime("%B %Y")
 
-# Determine the month totals from monthly_df (unfiltered for table purposes)
-# tables_df already has both months
-last_month_by_tenant = (
-    tables_df[["TENANT", "LAST_MONTH"]]
-    .sort_values("LAST_MONTH", ascending=False)
-    .rename(columns={"TENANT": "Tenant", "LAST_MONTH": "Activations"})
-    .reset_index(drop=True)
-)
-last_month_by_tenant.index += 1
-
-this_month_by_tenant = (
-    tables_df[["TENANT", "THIS_MONTH"]]
-    .sort_values("THIS_MONTH", ascending=False)
-    .rename(columns={"TENANT": "Tenant", "THIS_MONTH": "Activations"})
-    .reset_index(drop=True)
-)
-this_month_by_tenant.index += 1
+last_month_by_tenant = group_and_sort(tables_df, "LAST_MONTH")
+this_month_by_tenant = group_and_sort(tables_df, "THIS_MONTH")
 
 # Validate: the totals in these tables should match the monthly bar chart values
 # (both come from the same unfiltered query)

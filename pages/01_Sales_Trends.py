@@ -21,6 +21,8 @@ st.set_page_config(
     layout="wide",
 )
 inject_css()
+st.page_link("app.py", label="← Back to Menu")
+st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
 page_header("Sales Trends", badge="Sales")
 
 # ─────────────────────────────────────────────────────────────────────────────

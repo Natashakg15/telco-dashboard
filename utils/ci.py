@@ -133,6 +133,35 @@ PAGE_CSS = f"""
   .js-plotly-plot .plotly .bg {{
       fill: {SURFACE_1} !important;
   }}
+
+  /* ── Hide auto-generated sidebar page list ── */
+  [data-testid="stSidebarNav"] {{
+      display: none !important;
+  }}
+
+  /* ── Page link navigation buttons ── */
+  [data-testid="stPageLink"] {{
+      margin: 6px 0 0 0;
+  }}
+  [data-testid="stPageLink"] a {{
+      color: {HYPERMINT} !important;
+      font-size: 13px !important;
+      font-weight: 600;
+      text-decoration: none !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: 1px solid {BORDER};
+      border-radius: 6px;
+      background: {SURFACE_2};
+      transition: border-color 0.15s, background 0.15s;
+  }}
+  [data-testid="stPageLink"] a:hover {{
+      border-color: {HYPERMINT} !important;
+      background: {SURFACE_1} !important;
+      text-decoration: none !important;
+  }}
 </style>
 """
 

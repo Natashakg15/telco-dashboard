@@ -63,6 +63,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ── Pages with live implementations ──────────────────────────────────────────
+NAVIGABLE_PAGES = {
+    "Sales Trends": "pages/01_Sales_Trends.py",
+}
+
 # ── Section card data ─────────────────────────────────────────────────────────
 SECTIONS = [
     {
@@ -155,8 +160,17 @@ cols = st.columns(3, gap="medium")
 for idx, section in enumerate(SECTIONS):
     col = cols[idx % 3]
     accent = section["accent"]
+
+    # Navigable pages in this section (strip leading spaces for sub-items)
+    nav_in_section = [
+        (p.strip(), NAVIGABLE_PAGES[p.strip()])
+        for p in section["pages"]
+        if p.strip() in NAVIGABLE_PAGES
+    ]
+
     pages_html = "".join(
-        f"<li style='color:{'#aaa' if p.startswith(' ') else ZERO_WHITE};"
+        f"<li style='color:{'#aaa' if p.startswith(' ') else (HYPERMINT if p.strip() in NAVIGABLE_PAGES else ZERO_WHITE)};"
+        f"font-weight:{'600' if p.strip() in NAVIGABLE_PAGES else '400'};"
         f"font-size:13px; padding:2px 0;'>{p.strip()}</li>"
         for p in section["pages"]
     )
@@ -170,7 +184,7 @@ for idx, section in enumerate(SECTIONS):
                 border-top: 3px solid {accent};
                 border-radius:12px;
                 padding:20px 22px 22px 22px;
-                margin-bottom:20px;
+                margin-bottom:{"8px" if nav_in_section else "20px"};
                 min-height:280px;
             '>
                 <div style='display:flex; align-items:center; gap:10px; margin-bottom:12px;'>
@@ -185,6 +199,10 @@ for idx, section in enumerate(SECTIONS):
             """,
             unsafe_allow_html=True,
         )
+        for label, page_file in nav_in_section:
+            st.page_link(page_file, label=f"→ Open {label}")
+        if nav_in_section:
+            st.markdown("<div style='margin-bottom:12px;'></div>", unsafe_allow_html=True)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(

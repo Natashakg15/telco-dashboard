@@ -132,7 +132,7 @@ def load_daily(tenant_filter: str):
     df = run_query(f"""
         SELECT
             ACTIVATION_DATE,
-            COUNT(DISTINCT ACCOUNT_NUMBER) AS ACTIVATIONS
+            COUNT(*) AS ACTIVATIONS
         FROM {MERGE_TABLE}
         WHERE ACTIVATION_DATE >= DATEADD(month, -13, CURRENT_DATE())
           {tenant_filter}
@@ -148,12 +148,12 @@ def load_tables_data():
     df = run_query(f"""
         SELECT
             TENANT,
-            COUNT(DISTINCT CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
+            SUM(CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
                           = DATE_TRUNC('month', DATEADD(month,-1,CURRENT_DATE()))
-                     THEN ACCOUNT_NUMBER END) AS LAST_MONTH,
-            COUNT(DISTINCT CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
+                     THEN 1 ELSE 0 END) AS LAST_MONTH,
+            SUM(CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
                           = DATE_TRUNC('month', CURRENT_DATE())
-                     THEN ACCOUNT_NUMBER END) AS THIS_MONTH
+                     THEN 1 ELSE 0 END) AS THIS_MONTH
         FROM {MERGE_TABLE}
         WHERE TENANT IS NOT NULL AND TENANT != ''
           AND ACTIVATION_DATE >= DATE_TRUNC('month', DATEADD(month,-1,CURRENT_DATE()))

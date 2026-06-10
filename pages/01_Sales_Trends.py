@@ -145,7 +145,7 @@ def load_daily(tenant_filter: str):
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_tables_data():
     """Tenant tables are NEVER filtered — always show full picture."""
-    return run_query(f"""
+    df = run_query(f"""
         SELECT
             TENANT,
             COUNT(DISTINCT CASE WHEN DATE_TRUNC('month', ACTIVATION_DATE)
@@ -159,6 +159,8 @@ def load_tables_data():
           AND ACTIVATION_DATE >= DATE_TRUNC('month', DATEADD(month,-1,CURRENT_DATE()))
         GROUP BY 1
     """)
+    df.columns = [c.upper() for c in df.columns]
+    return df
 
 daily_df   = load_daily(tenant_clause)
 tables_df  = load_tables_data()

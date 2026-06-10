@@ -28,31 +28,32 @@ page_header("Sales Trends", badge="Sales")
 # ─────────────────────────────────────────────────────────────────────────────
 def map_tenant_group(name: str) -> str:
     n = name or ""
-    if "Build It" in n or "Build IT" in n or "Build it" in n:
+    nl = n.lower()
+    if "build it" in nl or "build it" in nl:
         return "Build It"
-    if "Midas" in n or "KR Motor Spares" in n or "ACA Auto parts" in n:
+    if "midas" in nl or "kr motor spares" in nl or "aca auto parts" in nl or "aca autoparts" in nl:
         return "Midas"
-    if "Mica" in n or "Greenfields Hardware" in n:
+    if "mica" in nl or "greenfields hardware" in nl:
         return "Mica"
-    if "Spargs" in n or "Savemor" in n or "Spar" in n:
+    if "spargs" in nl or "savemor" in nl or "spar" in nl:
         return "Spar Retail"
-    if "Fashion" in n:
+    if "fashion" in nl:
         return "Fashion Fusion"
-    if "Progas" in n:
+    if "progas" in nl:
         return "Progas"
-    if "Aheers" in n:
+    if "aheers" in nl:
         return "Aheers"
-    if n == "The Unlimited":
+    if nl == "the unlimited":
         return "The Unlimited"
-    if "Ladysmith Office National" in n:
+    if "ladysmith office national" in nl:
         return "Ladysmith Office National"
-    if "OnAir" in n or "On Air" in n:
+    if "onair" in nl or "on air" in nl:
         return "OnAir"
-    if "Pet Pool" in n:
+    if "pet pool" in nl:
         return "Pet Pool & Home"
-    if n == "Spot Mobile":
+    if nl == "spot mobile":
         return "Spot Mobile"
-    if "uConnect App" in n or "uConnect Digital" in n:
+    if "uconnect app" in nl or "uconnect digital" in nl:
         return "Spot Connect App & Digital"
     return "Other Tenants"
 

@@ -169,24 +169,10 @@ for idx, section in enumerate(SECTIONS):
         is_sub = p.startswith(" ")
         if name in NAVIGABLE_PAGES:
             url = "/" + NAVIGABLE_PAGES[name].split("/")[-1].replace(".py", "").lstrip("0123456789_")
-            # Highlight the tenant name within the link label (e.g. "Spar" in "Spar Scorecard")
-            display = name
-            for keyword in ("Spar",):
-                if keyword in display:
-                    display = display.replace(
-                        keyword,
-                        f"<span style='color:{HYPERMINT}; font-weight:800; "
-                        f"text-shadow:0 0 8px {HYPERMINT}44;'>{keyword}</span>",
-                    )
-            live_badge = (
-                f"<span style='background:{HYPERMINT}22; color:{HYPERMINT}; "
-                f"font-size:9px; font-weight:700; padding:1px 6px; border-radius:10px; "
-                f"letter-spacing:0.06em; margin-left:6px; vertical-align:middle;'>LIVE</span>"
-            )
             return (
-                f"<li style='font-size:13px; padding:3px 0;'>"
-                f"<a href='{url}' target='_self' style='color:{HYPERMINT}; font-weight:600; "
-                f"text-decoration:none;'>{display}</a>{live_badge}</li>"
+                f"<li style='font-size:13px; padding:2px 0;'>"
+                f"<a href='{url}' target='_self' style='color:{HYPERMINT}; font-weight:600;"
+                f"text-decoration:none;'>{name}</a></li>"
             )
         color = "#aaa" if is_sub else ZERO_WHITE
         return f"<li style='color:{color}; font-size:13px; padding:2px 0;'>{name}</li>"

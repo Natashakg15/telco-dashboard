@@ -93,6 +93,16 @@ def _demo_query(sql: str) -> pd.DataFrame:
             "THIS_MONTH": this,
         })
 
+    # SNU + Active 1 by activation date (Sales Trends page)
+    if "ACCOUNTCREATEDATE" in sql_up and "SIMS_NEVER_USED" in sql_up:
+        rng = pd.date_range(end=today, periods=90, freq="D")
+        np.random.seed(99)
+        return pd.DataFrame({
+            "DT":             rng,
+            "SIMS_NEVER_USED": np.random.randint(50, 400, 90),
+            "ACTIVE_1":        np.random.randint(200, 1500, 90),
+        })
+
     # Active subscriptions — activations + Active 1 % per day
     if "ACCOUNTCREATEDATE" in sql_up and "ACTIVE1_PCT" in sql_up:
         rng = pd.date_range(end=today, periods=31, freq="D")

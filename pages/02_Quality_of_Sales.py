@@ -13,7 +13,7 @@ from utils.ci import (
     HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE,
     INKCORE, SURFACE_1, SURFACE_2, BORDER, ZERO_WHITE,
 )
-from utils.snowflake_conn import run_query, MERGE_TABLE
+from utils.snowflake_conn import run_query
 
 USAGE_TABLE = "UCONNECT_DW.ANALYTICS.VW_ACTIVE_SUBSCRIPTIONS_USAGE_DETAILS"
 
@@ -119,45 +119,30 @@ def load_kpis():
 @st.cache_data(ttl=1800, show_spinner="Loading chart data…")
 def load_chart_data():
     """
-    Returns two DataFrames to build the combo chart:
-      acts_df    — daily activations from UCONNECT_MAY_MERGE (bars)
-      active1_df — Active 1 % per creation date from the usage view (line)
+    Single query from the active subscriptions view:
+      ACTIVATIONS — count of accounts created each day (bars)
+      ACTIVE1_PCT — % of those accounts that used their SIM within 30 days (line)
     """
-    acts = run_query(f"""
+    df = run_query(f"""
         SELECT
-            DATE(ACTIVATION_DATE) AS DT,
-            COUNT(*)              AS ACTIVATIONS
-        FROM {MERGE_TABLE}
-        WHERE ACTIVATION_DATE >= CURRENT_DATE() - 30
-        GROUP BY 1
-        ORDER BY 1
-    """)
-    acts.columns = [c.upper() for c in acts.columns]
-    if acts.empty:
-        import pandas as pd
-        acts = pd.DataFrame(columns=["DT", "ACTIVATIONS"])
-
-    active1 = run_query(f"""
-        SELECT
-            DATE(ACCOUNTCREATEDATE) AS DT,
+            DATE(ACCOUNTCREATEDATE)                                       AS DT,
+            COUNT(*)                                                      AS ACTIVATIONS,
             SUM(CASE WHEN USAGE_0_30_DAYS = '1' THEN 1 ELSE 0 END)::FLOAT
-                / NULLIF(COUNT(*), 0) AS ACTIVE1_PCT
+                / NULLIF(COUNT(*), 0)                                     AS ACTIVE1_PCT
         FROM {USAGE_TABLE}
         WHERE DATE(ACCOUNTCREATEDATE) >= CURRENT_DATE() - 30
         GROUP BY 1
         ORDER BY 1
     """)
-    active1.columns = [c.upper() for c in active1.columns]
-    if active1.empty:
-        import pandas as pd
-        active1 = pd.DataFrame(columns=["DT", "ACTIVE1_PCT"])
-
-    return acts, active1
+    df.columns = [c.upper() for c in df.columns]
+    if df.empty:
+        return pd.DataFrame(columns=["DT", "ACTIVATIONS", "ACTIVE1_PCT"])
+    return df
 
 
 # ── Load ──────────────────────────────────────────────────────────────────────
-kpis          = load_kpis()
-acts_df, active1_df = load_chart_data()
+kpis     = load_kpis()
+chart_df = load_chart_data()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper — format a 0-1 float as a percentage string
@@ -212,13 +197,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-acts_df["DT"]    = pd.to_datetime(acts_df["DT"])
-active1_df["DT"] = pd.to_datetime(active1_df["DT"])
-
-chart_df = (
-    pd.merge(acts_df, active1_df, on="DT", how="outer")
-    .sort_values("DT")
-)
+chart_df["DT"] = pd.to_datetime(chart_df["DT"])
+chart_df = chart_df.sort_values("DT")
 x_labels = chart_df["DT"].dt.strftime("%d %b").tolist()
 
 fig = go.Figure()

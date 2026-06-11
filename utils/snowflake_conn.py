@@ -86,4 +86,27 @@ def _demo_query(sql: str) -> pd.DataFrame:
             "THIS_MONTH": this,
         })
 
+    # Active subscriptions — activations + Active 1 % per day
+    if "ACCOUNTCREATEDATE" in sql_up and "ACTIVE1_PCT" in sql_up:
+        rng = pd.date_range(end=today, periods=31, freq="D")
+        np.random.seed(11)
+        activations = (
+            np.random.poisson(1800, 31)
+            * np.where(pd.DatetimeIndex(rng).dayofweek >= 5, 0.35, 1.0)
+        ).astype(int)
+        active1_pct = np.clip(np.random.normal(0.72, 0.08, 31), 0.40, 0.98)
+        return pd.DataFrame({
+            "DT":           rng,
+            "ACTIVATIONS":  activations,
+            "ACTIVE1_PCT":  active1_pct,
+        })
+
+    # Active subscriptions — KPI aggregates
+    if "ACCOUNTCREATEDATE" in sql_up:
+        return pd.DataFrame({
+            "ACTIVE7_30_35_PCT":     [0.61],
+            "STILL_USING_PCT":       [0.74],
+            "QUALITY_INDICATOR_PCT": [0.68],
+        })
+
     return pd.DataFrame()

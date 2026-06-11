@@ -243,12 +243,11 @@ fig.update_layout(
         tickfont=dict(size=10, color="#888"),
     ),
     yaxis=dict(
-        title="Activations",
+        title=dict(text="Activations", font=dict(color=SONIC_BLUE, size=11)),
         showgrid=True,
         gridcolor=BORDER,
         linecolor="rgba(0,0,0,0)",
         tickformat=",",
-        title=dict(text="Activations", font=dict(color=SONIC_BLUE, size=11)),
         tickfont=dict(color=SONIC_BLUE),
     ),
     yaxis2=dict(

@@ -64,6 +64,13 @@ def _demo_query(sql: str) -> pd.DataFrame:
     if "DISTINCT TENANT" in sql_up:
         return pd.DataFrame({"TENANT": _TENANTS})
 
+    # Monthly activations (DATE_TRUNC → MONTH_START alias)
+    if "MONTH_START" in sql_up:
+        rng = pd.date_range(end=today, periods=13, freq="MS")
+        np.random.seed(42)
+        counts = np.random.randint(3000, 12000, len(rng))
+        return pd.DataFrame({"MONTH_START": rng, "ACTIVATIONS": counts})
+
     # Daily activations
     if "ACTIVATION_DATE" in sql_up and "COUNT" in sql_up:
         rng = pd.date_range(end=today, periods=395, freq="D")
@@ -99,6 +106,16 @@ def _demo_query(sql: str) -> pd.DataFrame:
             "DT":           rng,
             "ACTIVATIONS":  activations,
             "ACTIVE1_PCT":  active1_pct,
+        })
+
+    # Spar / scorecard SIM quality (ACTIVE_1_COUNT, SIMS_NEVER_USED, etc.)
+    if "ACCOUNTCREATEDATE" in sql_up and "ACTIVE_1_COUNT" in sql_up:
+        return pd.DataFrame({
+            "ACTIVE_1_COUNT":   [8200],
+            "SIMS_NEVER_USED":  [1400],
+            "TOTAL_SIMS":       [11000],
+            "ACTIVE_1_PCT":     [0.745],
+            "QOS_PROXY_PCT":    [0.63],
         })
 
     # Active subscriptions — KPI aggregates

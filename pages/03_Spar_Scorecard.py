@@ -142,6 +142,9 @@ daily_df     = load_daily_activations()
 quality      = load_sim_quality()
 store_df     = load_store_breakdown()
 
+# Normalise date columns — guard against demo fallback returning different names
+if "MONTH_START" not in monthly_df.columns and "ACTIVATION_DATE" in monthly_df.columns:
+    monthly_df = monthly_df.rename(columns={"ACTIVATION_DATE": "MONTH_START"})
 monthly_df["MONTH_START"]   = pd.to_datetime(monthly_df["MONTH_START"])
 daily_df["ACTIVATION_DATE"] = pd.to_datetime(daily_df["ACTIVATION_DATE"])
 

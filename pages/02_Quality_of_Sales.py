@@ -106,6 +106,13 @@ def load_kpis():
         FROM {USAGE_TABLE}
     """)
     df.columns = [c.upper() for c in df.columns]
+    if df.empty:
+        import pandas as pd
+        return pd.Series({
+            "ACTIVE7_30_35_PCT":    None,
+            "STILL_USING_PCT":      None,
+            "QUALITY_INDICATOR_PCT": None,
+        })
     return df.iloc[0]
 
 
@@ -126,6 +133,9 @@ def load_chart_data():
         ORDER BY 1
     """)
     acts.columns = [c.upper() for c in acts.columns]
+    if acts.empty:
+        import pandas as pd
+        acts = pd.DataFrame(columns=["DT", "ACTIVATIONS"])
 
     active1 = run_query(f"""
         SELECT
@@ -138,6 +148,9 @@ def load_chart_data():
         ORDER BY 1
     """)
     active1.columns = [c.upper() for c in active1.columns]
+    if active1.empty:
+        import pandas as pd
+        active1 = pd.DataFrame(columns=["DT", "ACTIVE1_PCT"])
 
     return acts, active1
 

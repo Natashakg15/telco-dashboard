@@ -191,7 +191,14 @@ tables_df = load_tables_data()
 snu_df    = load_snu_active1()
 
 daily_df["ACTIVATION_DATE"] = pd.to_datetime(daily_df["ACTIVATION_DATE"])
-snu_df["DT"] = pd.to_datetime(snu_df["DT"])
+
+# Defensive: if expected columns are missing (stale cache / demo mismatch) use empty frame
+if "DT" not in snu_df.columns or "SIMS_NEVER_USED" not in snu_df.columns:
+    snu_df = pd.DataFrame({"DT": pd.Series(dtype="datetime64[ns]"),
+                           "SIMS_NEVER_USED": pd.Series(dtype=int),
+                           "ACTIVE_1": pd.Series(dtype=int)})
+else:
+    snu_df["DT"] = pd.to_datetime(snu_df["DT"])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Derived aggregations

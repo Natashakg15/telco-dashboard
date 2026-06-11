@@ -67,7 +67,7 @@ st.markdown(
 NAVIGABLE_PAGES = {
     "Sales Trends":                       "pages/01_Sales_Trends.py",
     "Quality of Sales by Tenant & Store": "pages/02_Quality_of_Sales.py",
-    "Spar":                               "pages/03_Spar_Scorecard.py",
+    "↳ Spar":                             "pages/03_Spar_Scorecard.py",
 }
 
 # ── Section card data ─────────────────────────────────────────────────────────

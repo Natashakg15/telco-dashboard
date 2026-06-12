@@ -1,6 +1,6 @@
 """
 Telco Retail Dashboard — Menu / Home Page
-Spot CI  ·  Pack v1
+Spot CI  ·  Pack v1  ·  40 pages
 """
 import streamlit as st
 from utils.ci import inject_css, HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE, INKCORE, SURFACE_1, SURFACE_2, BORDER, ZERO_WHITE

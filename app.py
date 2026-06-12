@@ -3,7 +3,6 @@ Telco Retail Dashboard — Menu / Home Page
 Spot CI  ·  Pack v1  ·  40 pages
 """
 import streamlit as st
-import streamlit.components.v1 as components
 from utils.ci import inject_css, HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE, INKCORE, SURFACE_1, SURFACE_2, BORDER, ZERO_WHITE
 
 st.set_page_config(
@@ -114,6 +113,17 @@ NAVIGABLE_PAGES = {
     "Value of New Business":              "pages/32_Value_New_Business.py",
 }
 
+# ── Build slug → page file lookup (used by nav intercept) ────────────────────
+SLUG_TO_FILE = {
+    v.split("/")[-1].replace(".py", "").lstrip("0123456789_"): v
+    for v in NAVIGABLE_PAGES.values()
+}
+
+# ── Navigation intercept — must run before any rendering ─────────────────────
+_go = st.query_params.get("go")
+if _go and _go in SLUG_TO_FILE:
+    st.switch_page(SLUG_TO_FILE[_go])
+
 # ── Section card data ─────────────────────────────────────────────────────────
 SECTIONS = [
     {
@@ -213,77 +223,46 @@ for idx, section in enumerate(SECTIONS):
     col = cols[idx % 3]
     accent = section["accent"]
 
-    # Build items HTML + JS navigation map
-    items_html = ""
-    nav_map = {}   # label → url path
-    for p in section["pages"]:
+    def page_item_html(p: str) -> str:
         name = p.strip()
         is_sub = p.startswith(" ") or (len(p) > 0 and p[0] == "↳")
         indent = "padding-left:14px;" if is_sub else ""
         if name in NAVIGABLE_PAGES:
-            filepath = NAVIGABLE_PAGES[name].split("/")[-1].replace(".py", "").lstrip("0123456789_")
-            url = f"/{filepath}"
-            nav_map[name] = url
-            safe_key = name.replace("'", "\\'")
-            items_html += (
+            slug = NAVIGABLE_PAGES[name].split("/")[-1].replace(".py", "").lstrip("0123456789_")
+            return (
                 f"<li style='padding:2px 0; {indent}'>"
-                f"<span class='nav-link' onclick=\"navigate('{url}')\" "
-                f"style='color:{HYPERMINT}; font-weight:600; font-size:13px; "
-                f"cursor:pointer;'>{name}</span></li>"
+                f"<a href='?go={slug}' style='color:{HYPERMINT}; font-weight:600; "
+                f"font-size:13px; text-decoration:none;'>{name}</a></li>"
             )
-        else:
-            color = "#555" if is_sub else "#888"
-            items_html += (
-                f"<li style='color:{color}; font-size:13px; padding:2px 0; {indent}'>{name}</li>"
-            )
+        color = "#555" if is_sub else "#888"
+        return f"<li style='color:{color}; font-size:13px; padding:2px 0; {indent}'>{name}</li>"
 
-    card_height = 72 + len(section["pages"]) * 26
-
-    card_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-      * {{ margin:0; padding:0; box-sizing:border-box; }}
-      body {{ background:transparent; font-family: Helvetica, Arial, sans-serif; }}
-      .card {{
-        background:{SURFACE_1};
-        border:1px solid {BORDER};
-        border-top:3px solid {accent};
-        border-radius:12px;
-        padding:18px 20px 18px 20px;
-      }}
-      .card-title {{
-        display:flex; align-items:center; gap:10px; margin-bottom:12px;
-      }}
-      .card-title .icon {{ font-size:20px; }}
-      .card-title .label {{
-        font-size:15px; font-weight:700; color:{accent};
-        font-family: Helvetica, Arial, sans-serif;
-      }}
-      ul {{ padding-left:16px; list-style:disc; }}
-      .nav-link:hover {{ color:#ffffff !important; text-decoration:underline; }}
-    </style>
-    </head>
-    <body>
-    <div class="card">
-      <div class="card-title">
-        <span class="icon">{section["icon"]}</span>
-        <span class="label">{section["title"]}</span>
-      </div>
-      <ul>{items_html}</ul>
-    </div>
-    <script>
-      function navigate(url) {{
-        window.parent.location.href = url;
-      }}
-    </script>
-    </body>
-    </html>
-    """
+    pages_html = "".join(page_item_html(p) for p in section["pages"])
 
     with col:
-        components.html(card_html, height=card_height, scrolling=False)
+        st.markdown(
+            f"""
+            <div style='
+                background:{SURFACE_1};
+                border:1px solid {BORDER};
+                border-top:3px solid {accent};
+                border-radius:12px;
+                padding:20px 22px 22px 22px;
+                margin-bottom:20px;
+                min-height:280px;
+            '>
+                <div style='display:flex; align-items:center; gap:10px; margin-bottom:12px;'>
+                    <span style='font-size:22px;'>{section["icon"]}</span>
+                    <span style='font-size:16px; font-weight:700;
+                                 color:{accent};'>{section["title"]}</span>
+                </div>
+                <ul style='margin:0; padding-left:16px; list-style:disc;'>
+                    {pages_html}
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(

@@ -3,6 +3,7 @@ Telco Retail Dashboard — Menu / Home Page
 Spot CI  ·  Pack v1  ·  40 pages
 """
 import streamlit as st
+import streamlit.components.v1 as components
 from utils.ci import inject_css, HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE, INKCORE, SURFACE_1, SURFACE_2, BORDER, ZERO_WHITE
 
 st.set_page_config(
@@ -212,54 +213,77 @@ for idx, section in enumerate(SECTIONS):
     col = cols[idx % 3]
     accent = section["accent"]
 
-    with col:
-        # Card header
-        st.markdown(
-            f"""
-            <div style='
-                background:{SURFACE_1};
-                border:1px solid {BORDER};
-                border-top:3px solid {accent};
-                border-radius:12px 12px 0 0;
-                padding:16px 20px 10px 20px;
-            '>
-                <div style='display:flex; align-items:center; gap:10px;'>
-                    <span style='font-size:20px;'>{section["icon"]}</span>
-                    <span style='font-size:15px; font-weight:700;
-                                 color:{accent};'>{section["title"]}</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # Card body — mix of st.page_link (navigable) and styled markdown (labels)
-        with st.container():
-            st.markdown(
-                f"<div style='background:{SURFACE_1}; border-left:1px solid {BORDER};"
-                f"border-right:1px solid {BORDER}; padding:4px 20px 12px 20px;'>",
-                unsafe_allow_html=True,
+    # Build items HTML + JS navigation map
+    items_html = ""
+    nav_map = {}   # label → url path
+    for p in section["pages"]:
+        name = p.strip()
+        is_sub = p.startswith(" ") or (len(p) > 0 and p[0] == "↳")
+        indent = "padding-left:14px;" if is_sub else ""
+        if name in NAVIGABLE_PAGES:
+            filepath = NAVIGABLE_PAGES[name].split("/")[-1].replace(".py", "").lstrip("0123456789_")
+            url = f"/{filepath}"
+            nav_map[name] = url
+            safe_key = name.replace("'", "\\'")
+            items_html += (
+                f"<li style='padding:2px 0; {indent}'>"
+                f"<span class='nav-link' onclick=\"navigate('{url}')\" "
+                f"style='color:{HYPERMINT}; font-weight:600; font-size:13px; "
+                f"cursor:pointer;'>{name}</span></li>"
             )
-            for p in section["pages"]:
-                name = p.strip()
-                is_sub = p.startswith(" ") or (len(p) > 0 and p[0] == "↳")
-                if name in NAVIGABLE_PAGES:
-                    st.page_link(NAVIGABLE_PAGES[name], label=name)
-                else:
-                    color = "#555" if is_sub else "#888"
-                    indent = "padding-left:12px;" if is_sub else ""
-                    st.markdown(
-                        f"<div style='font-size:12px; color:{color}; {indent} padding:1px 0;'>{name}</div>",
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            color = "#555" if is_sub else "#888"
+            items_html += (
+                f"<li style='color:{color}; font-size:13px; padding:2px 0; {indent}'>{name}</li>"
+            )
 
-        # Card footer
-        st.markdown(
-            f"<div style='background:{SURFACE_1}; border:1px solid {BORDER};"
-            f"border-top:none; border-radius:0 0 12px 12px; height:10px; margin-bottom:20px;'></div>",
-            unsafe_allow_html=True,
-        )
+    card_height = 72 + len(section["pages"]) * 26
+
+    card_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+      * {{ margin:0; padding:0; box-sizing:border-box; }}
+      body {{ background:transparent; font-family: Helvetica, Arial, sans-serif; }}
+      .card {{
+        background:{SURFACE_1};
+        border:1px solid {BORDER};
+        border-top:3px solid {accent};
+        border-radius:12px;
+        padding:18px 20px 18px 20px;
+      }}
+      .card-title {{
+        display:flex; align-items:center; gap:10px; margin-bottom:12px;
+      }}
+      .card-title .icon {{ font-size:20px; }}
+      .card-title .label {{
+        font-size:15px; font-weight:700; color:{accent};
+        font-family: Helvetica, Arial, sans-serif;
+      }}
+      ul {{ padding-left:16px; list-style:disc; }}
+      .nav-link:hover {{ color:#ffffff !important; text-decoration:underline; }}
+    </style>
+    </head>
+    <body>
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">{section["icon"]}</span>
+        <span class="label">{section["title"]}</span>
+      </div>
+      <ul>{items_html}</ul>
+    </div>
+    <script>
+      function navigate(url) {{
+        window.parent.location.href = url;
+      }}
+    </script>
+    </body>
+    </html>
+    """
+
+    with col:
+        components.html(card_html, height=card_height, scrolling=False)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(

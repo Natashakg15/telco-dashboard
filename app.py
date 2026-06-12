@@ -212,43 +212,52 @@ for idx, section in enumerate(SECTIONS):
     col = cols[idx % 3]
     accent = section["accent"]
 
-    def page_item_html(p: str) -> str:
-        name = p.strip()
-        is_sub = p.startswith(" ")
-        if name in NAVIGABLE_PAGES:
-            url = "/" + NAVIGABLE_PAGES[name].split("/")[-1].replace(".py", "").lstrip("0123456789_")
-            return (
-                f"<li style='font-size:13px; padding:2px 0;'>"
-                f"<a href='{url}' target='_self' style='color:{HYPERMINT}; font-weight:600;"
-                f"text-decoration:none;'>{name}</a></li>"
-            )
-        color = "#aaa" if is_sub else ZERO_WHITE
-        return f"<li style='color:{color}; font-size:13px; padding:2px 0;'>{name}</li>"
-
-    pages_html = "".join(page_item_html(p) for p in section["pages"])
-
     with col:
+        # Card header
         st.markdown(
             f"""
             <div style='
                 background:{SURFACE_1};
                 border:1px solid {BORDER};
-                border-top: 3px solid {accent};
-                border-radius:12px;
-                padding:20px 22px 22px 22px;
-                margin-bottom:20px;
-                min-height:280px;
+                border-top:3px solid {accent};
+                border-radius:12px 12px 0 0;
+                padding:16px 20px 10px 20px;
             '>
-                <div style='display:flex; align-items:center; gap:10px; margin-bottom:12px;'>
-                    <span style='font-size:22px;'>{section["icon"]}</span>
-                    <span style='font-size:16px; font-weight:700;
+                <div style='display:flex; align-items:center; gap:10px;'>
+                    <span style='font-size:20px;'>{section["icon"]}</span>
+                    <span style='font-size:15px; font-weight:700;
                                  color:{accent};'>{section["title"]}</span>
                 </div>
-                <ul style='margin:0; padding-left:16px; list-style:disc;'>
-                    {pages_html}
-                </ul>
             </div>
             """,
+            unsafe_allow_html=True,
+        )
+
+        # Card body — mix of st.page_link (navigable) and styled markdown (labels)
+        with st.container():
+            st.markdown(
+                f"<div style='background:{SURFACE_1}; border-left:1px solid {BORDER};"
+                f"border-right:1px solid {BORDER}; padding:4px 20px 12px 20px;'>",
+                unsafe_allow_html=True,
+            )
+            for p in section["pages"]:
+                name = p.strip()
+                is_sub = p.startswith(" ") or (len(p) > 0 and p[0] == "↳")
+                if name in NAVIGABLE_PAGES:
+                    st.page_link(NAVIGABLE_PAGES[name], label=name)
+                else:
+                    color = "#555" if is_sub else "#888"
+                    indent = "padding-left:12px;" if is_sub else ""
+                    st.markdown(
+                        f"<div style='font-size:12px; color:{color}; {indent} padding:1px 0;'>{name}</div>",
+                        unsafe_allow_html=True,
+                    )
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        # Card footer
+        st.markdown(
+            f"<div style='background:{SURFACE_1}; border:1px solid {BORDER};"
+            f"border-top:none; border-radius:0 0 12px 12px; height:10px; margin-bottom:20px;'></div>",
             unsafe_allow_html=True,
         )
 

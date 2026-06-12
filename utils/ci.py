@@ -142,28 +142,29 @@ PAGE_CSS = f"""
       display: none !important;
   }}
 
-  /* ── Page link navigation buttons ── */
+  /* ── Page link — menu cards (plain text style) ── */
   [data-testid="stPageLink"] {{
-      margin: 6px 0 0 0;
+      margin: 0 !important;
+      padding: 0 !important;
   }}
-  [data-testid="stPageLink"] a {{
+  [data-testid="stPageLink"] a,
+  [data-testid="stPageLink-NavLink"] {{
       color: {HYPERMINT} !important;
       font-size: 13px !important;
-      font-weight: 600;
+      font-weight: 600 !important;
       text-decoration: none !important;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      border: 1px solid {BORDER};
-      border-radius: 6px;
-      background: {SURFACE_2};
-      transition: border-color 0.15s, background 0.15s;
+      background: none !important;
+      border: none !important;
+      padding: 2px 0 !important;
+      margin: 0 !important;
+      display: inline !important;
+      border-radius: 0 !important;
   }}
-  [data-testid="stPageLink"] a:hover {{
-      border-color: {HYPERMINT} !important;
-      background: {SURFACE_1} !important;
-      text-decoration: none !important;
+  [data-testid="stPageLink"] a:hover,
+  [data-testid="stPageLink-NavLink"]:hover {{
+      color: {ZERO_WHITE} !important;
+      text-decoration: underline !important;
+      background: none !important;
   }}
 </style>
 """

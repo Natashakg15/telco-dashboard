@@ -64,12 +64,58 @@ def _demo_query(sql: str) -> pd.DataFrame:
     if "DISTINCT TENANT" in sql_up:
         return pd.DataFrame({"TENANT": _TENANTS})
 
+    # Monthly activations + reward cost per activation (complex JOIN — must precede MONTH_START)
+    if "REWARD_COST_PER_ACT" in sql_up:
+        rng = pd.date_range(end=today, periods=13, freq="MS")
+        np.random.seed(33)
+        acts = np.random.randint(3000, 12000, len(rng))
+        reward_val = np.random.uniform(50000, 300000, len(rng))
+        reward_qty = np.random.randint(200, 2000, len(rng))
+        total_rev  = np.random.uniform(800000, 3000000, len(rng))
+        return pd.DataFrame({
+            "MONTH_START":        rng,
+            "ACTIVATIONS":        acts,
+            "REWARD_VALUE":       reward_val.round(0),
+            "REWARD_QTY":         reward_qty,
+            "TOTAL_REVENUE":      total_rev.round(0),
+            "REWARD_COST_PER_ACT": (reward_val / acts).round(2),
+        })
+
+    # Monthly revenue (TOTAL_REVENUE + MONTH_START — must precede plain MONTH_START)
+    if "TOTAL_REVENUE" in sql_up and "MONTH_START" in sql_up:
+        rng = pd.date_range(end=today, periods=13, freq="MS")
+        np.random.seed(43)
+        rev = np.random.uniform(800000, 3000000, len(rng))
+        return pd.DataFrame({
+            "MONTH_START":   rng,
+            "TOTAL_REVENUE": rev.round(0),
+            "CELLC":   (rev * 0.40).round(0),
+            "VOUCHER": (rev * 0.15).round(0),
+            "APP":     (rev * 0.20).round(0),
+            "BILLRUN": (rev * 0.15).round(0),
+            "POSTPAID":(rev * 0.10).round(0),
+        })
+
     # Monthly activations (DATE_TRUNC → MONTH_START alias)
     if "MONTH_START" in sql_up:
         rng = pd.date_range(end=today, periods=13, freq="MS")
         np.random.seed(42)
         counts = np.random.randint(3000, 12000, len(rng))
         return pd.DataFrame({"MONTH_START": rng, "ACTIVATIONS": counts})
+
+    # Channel acquisitions by month (must precede plain ACTIVATION_DATE check)
+    if "ACT_BY_CHANNEL" in sql_up:
+        rng = pd.date_range(end=today, periods=12, freq="MS")
+        np.random.seed(55)
+        rows = []
+        for m in rng:
+            for ch, base in [("F2F", 5000), ("Telesales", 2500), ("Digital", 800)]:
+                rows.append({
+                    "ACQ_MONTH": m,
+                    "SALES_CHANNEL": ch,
+                    "ACT_BY_CHANNEL": int(np.random.poisson(base)),
+                })
+        return pd.DataFrame(rows)
 
     # Daily activations
     if "ACTIVATION_DATE" in sql_up and "COUNT" in sql_up:
@@ -134,6 +180,45 @@ def _demo_query(sql: str) -> pd.DataFrame:
             "ACTIVE7_30_35_PCT":     [0.61],
             "STILL_USING_PCT":       [0.74],
             "QUALITY_INDICATOR_PCT": [0.68],
+        })
+
+    # ── New aggregate KPIs ────────────────────────────────────────────────────
+
+    # Total active SIM count (no termination)
+    if "ACTIVE_SIM_COUNT" in sql_up:
+        return pd.DataFrame({"ACTIVE_SIM_COUNT": [87432]})
+
+    # Total SIMs ever sold (all time)
+    if "TOTAL_SIMS_SOLD" in sql_up:
+        return pd.DataFrame({"TOTAL_SIMS_SOLD": [245000]})
+
+    # Activations MTD (single row)
+    if "ACT_MTD" in sql_up:
+        return pd.DataFrame({"ACT_MTD": [4218]})
+
+    # Revenue MTD (single row)
+    if "REV_MTD" in sql_up:
+        return pd.DataFrame({"REV_MTD": [2341000.0]})
+
+    # Sales channel breakdown
+    if "SALES_CHANNEL" in sql_up and "SIMS" in sql_up:
+        return pd.DataFrame({
+            "CHANNEL": ["F2F", "Telesales", "Digital"],
+            "SIMS": [62000, 28000, 8200],
+        })
+
+    # SIM grouping (Prepay / Postpaid / FLTE)
+    if "SIM_GROUPING" in sql_up:
+        return pd.DataFrame({
+            "SIM_GROUPING": ["Prepay", "Postpaid", "FLTE"],
+            "SIMS": [71000, 18000, 5100],
+        })
+
+    # Churn by reason
+    if "CHURN_COUNT" in sql_up:
+        return pd.DataFrame({
+            "CHURN_REASON": ["Not using", "Port out", "Credit fail", "Deceased", "Other"],
+            "CHURN_COUNT": [1200, 450, 210, 80, 320],
         })
 
     return pd.DataFrame()

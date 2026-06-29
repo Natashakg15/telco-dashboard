@@ -131,8 +131,32 @@ with c3:
         placeholder_chart("ARPU by Cohort Month", "Revenue join returned no data", height=310)
 
 with c4:
-    placeholder_chart(
-        "Cohort 1 / 2 / 3 — Acquired & Active SIMs",
-        "Dedicated COHORT table required — pending data access",
-        height=310,
-    )
+    channel_by_month = run_query(f"""
+        SELECT
+            DATE_TRUNC('month', ACTIVATION_DATE) AS ACQ_MONTH,
+            COALESCE(SALES_CHANNEL,'Unknown')    AS SALES_CHANNEL,
+            COUNT(*)                             AS ACT_BY_CHANNEL
+        FROM {MERGE_TABLE}
+        WHERE ACTIVATION_DATE >= DATEADD(month,-12,CURRENT_DATE())
+        GROUP BY 1, 2 ORDER BY 1, 2
+    """)
+    channel_by_month.columns = [c.upper() for c in channel_by_month.columns]
+    if not channel_by_month.empty:
+        channel_by_month["ACQ_MONTH"] = pd.to_datetime(channel_by_month["ACQ_MONTH"])
+        channels = channel_by_month["SALES_CHANNEL"].unique().tolist()
+        pivot = channel_by_month.pivot_table(
+            index="ACQ_MONTH", columns="SALES_CHANNEL", values="ACT_BY_CHANNEL", fill_value=0
+        ).sort_index()
+        x_ch = pivot.index.strftime("%b '%y").tolist()
+        fig_ch = go.Figure()
+        for i, ch in enumerate(pivot.columns):
+            fig_ch.add_trace(go.Bar(
+                x=x_ch, y=pivot[ch].tolist(),
+                name=ch, marker_color=CHART_PALETTE[i % len(CHART_PALETTE)],
+                marker_line_width=0,
+                hovertemplate=f"{ch}<br>%{{x}}<br><b>%{{y:,}}</b><extra></extra>",
+            ))
+        layout_ch = _base("Acquisitions by Channel — Last 12 Months (Stacked)")
+        layout_ch["barmode"] = "stack"
+        fig_ch.update_layout(**layout_ch)
+        st.plotly_chart(fig_ch, use_container_width=True, config={"displayModeBar": False})

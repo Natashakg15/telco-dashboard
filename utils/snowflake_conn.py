@@ -52,7 +52,8 @@ def run_query(sql: str) -> pd.DataFrame:
         # Normalise column names to uppercase for consistency
         df.columns = [c.upper() for c in df.columns]
         return df
-    except Exception:
+    except Exception as e:
+        st.error(f"⚠️ Snowflake connection failed, showing demo data instead: {e}")
         return _demo_query(sql)
 
 

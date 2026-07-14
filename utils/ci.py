@@ -136,7 +136,7 @@ PAGE_CSS = f"""
 
   /* ── Hide auto-generated sidebar page list ── */
   [data-testid="stSidebarNav"],
-  [data-testid="stSidebarNav"] + div,
+  [data-testid="stSidebarNav"] + div:empty,
   section[data-testid="stSidebar"] nav,
   section[data-testid="stSidebar"] ul {{
       display: none !important;

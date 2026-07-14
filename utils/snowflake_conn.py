@@ -53,7 +53,9 @@ def run_query(sql: str) -> pd.DataFrame:
         df.columns = [c.upper() for c in df.columns]
         return df
     except Exception as e:
-        st.error(f"⚠️ Snowflake connection failed, showing demo data instead: {e}")
+        if not st.session_state.get("_sf_error_shown"):
+            st.caption(f"⚠️ Snowflake unavailable, showing demo data — {e}")
+            st.session_state["_sf_error_shown"] = True
         return _demo_query(sql)
 
 

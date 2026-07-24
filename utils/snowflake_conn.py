@@ -32,7 +32,7 @@ def run_query(sql: str) -> pd.DataFrame:
 
     if _is_demo():
         if not st.session_state.get("_sf_demo_reason_shown"):
-            print("[snowflake_conn] 'snowflake' block missing from st.secrets — using demo data")
+            print("[snowflake_conn] 'snowflake' block missing from st.secrets — using demo data", flush=True)
             st.session_state["_sf_demo_reason_shown"] = True
         return _demo_query(sql)
 
@@ -56,7 +56,7 @@ def run_query(sql: str) -> pd.DataFrame:
         df.columns = [c.upper() for c in df.columns]
         return df
     except Exception as e:
-        print(f"[snowflake_conn] live query failed, falling back to demo data: {e!r}")
+        print(f"[snowflake_conn] live query failed, falling back to demo data: {e!r}", flush=True)
         if not st.session_state.get("_sf_error_shown"):
             st.caption(f"⚠️ Snowflake unavailable, showing demo data — {e}")
             st.session_state["_sf_error_shown"] = True

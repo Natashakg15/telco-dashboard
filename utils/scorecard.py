@@ -95,6 +95,11 @@ def _load_stores(where_merge: str) -> pd.DataFrame:
         ORDER BY THIS_MONTH DESC
     """)
     df.columns = [c.upper() for c in df.columns]
+    df = df.rename(columns={
+        "TENANT": "Tenant",
+        "THIS_MONTH": "This Month",
+        "LAST_MONTH": "Last Month",
+    })
     return df
 
 

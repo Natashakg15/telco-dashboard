@@ -6,6 +6,7 @@ Full CPA requires GL cost data (pending). Reward-based cost per acquisition avai
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from datetime import date
 
 from utils.ci import (
     inject_css, page_header,
@@ -13,7 +14,7 @@ from utils.ci import (
     SURFACE_1, BORDER, ZERO_WHITE, CHART_PALETTE,
 )
 from utils.snowflake_conn import run_query, MERGE_TABLE
-from utils.page_helpers import placeholder_chart
+from utils.financials import load_financials, section_total, SNAPSHOT_DATE, UNVERIFIED_FROM
 
 REV_TABLE = "UCONNECT_DW.ANALYTICS.UCONNECT_MAY_MERGE_REVENUE"
 
@@ -25,8 +26,10 @@ page_header("Acquisition Cost Metrics", badge="Financials")
 
 st.markdown(
     f"<p style='color:#666; font-size:12px; margin-bottom:16px;'>"
-    f"Reward-based cost per acquisition from UCONNECT_MAY_MERGE_REVENUE. "
-    f"Full CPA (GL / CoS) is <span style='color:{HIGHVOLT_ORANGE};'>pending GL data access.</span></p>",
+    f"Reward-based cost per acquisition from UCONNECT_MAY_MERGE_REVENUE (live). "
+    f"Full CPA below uses the GL Acquisition Cost section from a hand-maintained "
+    f"Excel snapshot ({SNAPSHOT_DATE}) — the two won't reconcile exactly since they're "
+    f"different sources measuring overlapping but not identical cost lines.</p>",
     unsafe_allow_html=True,
 )
 
@@ -163,9 +166,23 @@ with c3:
         st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
 
 with c4:
-    placeholder_chart(
-        "Full CPA — Total Cost per Activation",
-        "Requires GL / CoS data — pending data access. "
-        "Full CPA = (Marketing + Reward + CoS) ÷ Activations.",
-        height=310,
-    )
+    fin_df = load_financials()
+    gl_acq = section_total(fin_df, "Acqusition Cost")
+    acts_by_month = df.set_index("MONTH_START")["ACTIVATIONS"]
+    full_cpa = (gl_acq / acts_by_month.reindex(gl_acq.index).replace(0, float("nan")))
+    trend_cutoff = min(pd.Timestamp(date.today()) + pd.DateOffset(months=1), UNVERIFIED_FROM)
+    full_cpa_t = full_cpa[(full_cpa.index <= trend_cutoff) & full_cpa.index.isin(acts_by_month.index)].tail(13)
+    if not full_cpa_t.dropna().empty:
+        fig4 = go.Figure(go.Scatter(
+            x=full_cpa_t.index.strftime("%b '%y").tolist(), y=full_cpa_t.tolist(),
+            mode="lines+markers", line=dict(color=HIGHVOLT_ORANGE, width=2),
+            fill="tozeroy", fillcolor="rgba(244,70,16,0.08)",
+            hovertemplate="%{x}<br><b>R%{y:,.2f} per activation</b><extra></extra>",
+        ))
+        layout4 = _base("Full CPA — GL Acquisition Cost ÷ Activations")
+        layout4["yaxis"]["tickprefix"] = "R"
+        layout4["yaxis"]["tickformat"] = ",.2f"
+        fig4.update_layout(**layout4)
+        st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.caption("Full CPA unavailable — no overlapping months between GL and Snowflake activation data.")

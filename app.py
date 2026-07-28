@@ -213,6 +213,8 @@ SECTIONS = [
             "Forward 12 & Trailing 12",
             "Value of New Business",
         ],
+        "note": "Income Statement → Opex Metrics = live (Excel snapshot, manual refresh). "
+                 "Value of New Business still pending cohort data.",
     },
 ]
 

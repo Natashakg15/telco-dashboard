@@ -5,6 +5,7 @@ Data: UCONNECT_DW.ANALYTICS.UCONNECT_MAY_MERGE_REVENUE
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from datetime import date
 
 from utils.ci import (
     inject_css, page_header,
@@ -12,7 +13,7 @@ from utils.ci import (
     SURFACE_1, BORDER, ZERO_WHITE,
 )
 from utils.snowflake_conn import run_query
-from utils.page_helpers import placeholder_chart
+from utils.financials import load_financials, section_breakdown, SNAPSHOT_DATE, UNVERIFIED_FROM
 
 REV_TABLE = "UCONNECT_DW.ANALYTICS.UCONNECT_MAY_MERGE_REVENUE"
 MERGE_TABLE = "UCONNECT_DW.ANALYTICS.UCONNECT_MAY_MERGE"
@@ -133,4 +134,24 @@ with c3:
     st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
 
 with c4:
-    placeholder_chart("Net Revenue (excl. VAT & cost)", "Income Statement / GL data", height=310)
+    fin_df = load_financials()
+    today_ts = pd.Timestamp(date.today())
+    trend_cutoff = min(today_ts + pd.DateOffset(months=6), UNVERIFIED_FROM - pd.DateOffset(months=1))
+    rev_breakdown = section_breakdown(fin_df, "Revenue", by="subheader")
+    rev_breakdown = rev_breakdown[rev_breakdown.index <= trend_cutoff].tail(13)
+    fig4 = go.Figure()
+    for col, color in zip(rev_breakdown.columns, [HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE]):
+        fig4.add_trace(go.Bar(
+            x=rev_breakdown.index.strftime("%b '%y").tolist(), y=rev_breakdown[col].tolist(),
+            name=col, marker_color=color, marker_line_width=0,
+        ))
+    layout4 = _base(f"GL Revenue by Category — snapshot {SNAPSHOT_DATE}")
+    layout4["yaxis"]["tickprefix"] = "R"
+    layout4["yaxis"]["tickformat"] = ",.0f"
+    layout4["legend"] = dict(orientation="h", y=1.15, font=dict(color=ZERO_WHITE, size=10), bgcolor="rgba(0,0,0,0)")
+    fig4.update_layout(**layout4, barmode="stack")
+    st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
+    st.caption(
+        "From the GL income statement (hand-maintained Excel snapshot), not the "
+        "Snowflake-based figures above — expect the totals not to reconcile exactly."
+    )

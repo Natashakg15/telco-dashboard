@@ -11,8 +11,10 @@ SONIC_BLUE     = "#2d40e9"   # secondary accent (blue)
 ULTRAVIOLET    = "#52BEC0"   # tertiary accent (teal/cyan)
 HIGHVOLT_ORANGE= "#f44610"   # highlight / alert (orange)
 
-# Chart colour sequence (rotate through these for multi-series charts)
-CHART_PALETTE = [HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE, "#a0a0a0"]
+# Chart colour sequence (rotate through these for multi-series charts).
+# HighVolt Orange leads — matches the primary-accent usage on the other live
+# Spot dashboards (KPI numbers, sparklines) for cross-board uniformity.
+CHART_PALETTE = [HIGHVOLT_ORANGE, HYPERMINT, SONIC_BLUE, ULTRAVIOLET, "#a0a0a0"]
 
 # ── Card / surface shades ─────────────────────────────────────────────────────
 SURFACE_1 = "#1a1a1a"   # card background
@@ -71,7 +73,7 @@ PAGE_CSS = f"""
   /* ── DataFrames / tables ── */
   .dataframe thead th {{
       background-color: {SURFACE_2} !important;
-      color: {HYPERMINT} !important;
+      color: {HIGHVOLT_ORANGE} !important;
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -87,12 +89,12 @@ PAGE_CSS = f"""
   }}
   h1 {{ color: {ZERO_WHITE}; }}
   h2 {{ color: {ZERO_WHITE}; }}
-  h3 {{ color: {HYPERMINT}; }}
+  h3 {{ color: {HIGHVOLT_ORANGE}; }}
 
   /* ── Accent rule ── */
   .spot-rule {{
       height: 3px;
-      background: linear-gradient(90deg, {HYPERMINT}, {SONIC_BLUE}, {ULTRAVIOLET});
+      background: linear-gradient(90deg, {HIGHVOLT_ORANGE}, {HYPERMINT}, {SONIC_BLUE});
       border: none;
       border-radius: 2px;
       margin: 8px 0 24px 0;
@@ -112,14 +114,14 @@ PAGE_CSS = f"""
 
   /* ── Filter pill ── */
   div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
-      background-color: {HYPERMINT} !important;
-      color: {INKCORE} !important;
+      background-color: {HIGHVOLT_ORANGE} !important;
+      color: {ZERO_WHITE} !important;
   }}
 
   /* ── Buttons ── */
   .stButton > button {{
-      background-color: {HYPERMINT};
-      color: {INKCORE};
+      background-color: {HIGHVOLT_ORANGE};
+      color: {ZERO_WHITE};
       border: none;
       border-radius: 8px;
       font-weight: 600;
@@ -149,7 +151,7 @@ PAGE_CSS = f"""
   }}
   [data-testid="stPageLink"] a,
   [data-testid="stPageLink-NavLink"] {{
-      color: {HYPERMINT} !important;
+      color: {HIGHVOLT_ORANGE} !important;
       font-size: 13px !important;
       font-weight: 600 !important;
       text-decoration: none !important;

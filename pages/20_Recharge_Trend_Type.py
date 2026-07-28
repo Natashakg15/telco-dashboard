@@ -22,8 +22,10 @@ REVENUE_TYPES = {
     "App Purchases":         ("REVENUE_APP_PURCHASES_QUANTITY",         "REVENUE_APP_PURCHASES_VALUE"),
     "Billrun":               ("REVENUE_MAY_BILLRUN_QUANITITY",          "REVENUE_MAY_BILLRUN_VALUE"),
     "Postpaid (Successful)": ("REVENUE_POST_PAID_SUCCESSFULL_QUANTITY", "REVENUE_POST_PAID_SUCCESSFULL_VALUE"),
-    "WhatsApp Purchases":    ("REVENUE_WHATSAPP_PURCHASES_QUANTITY",    "REVENUE_WHATSAPP_PURCHASES_VALUE"),
     "Website Recharges":     ("REVENUE_MAY_WEBSITE_RECHARGES_QUANTITY", "REVENUE_MAY_WEBSITE_RECHARGES_VALUE"),
+    # "WhatsApp Purchases" removed: REVENUE_WHATSAPP_PURCHASES_VALUE is corrupted for every
+    # row of WALLET='Recharge Wallet - Customer WhatsApp purchases' (values ~1e18-1e19,
+    # confirmed 2023-09 through 2026-07) - needs an upstream ETL/data fix before it's usable.
 }
 
 PALETTE = [HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE, "#9b59b6", "#f1c40f", "#1abc9c"]

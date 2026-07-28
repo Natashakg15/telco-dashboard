@@ -14,6 +14,7 @@ from utils.ci import (
 )
 from utils.snowflake_conn import run_query, MERGE_TABLE
 from utils.page_helpers import placeholder_chart
+from utils.cohort import load_cohort_aging
 
 REV_TABLE = "UCONNECT_DW.ANALYTICS.UCONNECT_MAY_MERGE_REVENUE"
 
@@ -25,9 +26,9 @@ page_header("Commercial Cohort Analysis", badge="Commercial")
 
 st.markdown(
     f"<p style='color:#666; font-size:12px; margin-bottom:16px;'>"
-    f"Activation cohort view from UCONNECT_MAY_MERGE. "
-    f"Revenue Cohort tables (Cohort 1/2/3) require a dedicated cohort revenue source — "
-    f"<span style='color:{HIGHVOLT_ORANGE};'>pending data access.</span></p>",
+    f"Activation cohort view from UCONNECT_MAY_MERGE. Revenue-by-aging-month below is "
+    f"built by joining UCONNECT_MAY_MERGE + UCONNECT_MAY_MERGE_REVENUE ourselves — no "
+    f"dedicated cohort table needed.</p>",
     unsafe_allow_html=True,
 )
 
@@ -160,3 +161,65 @@ with c4:
         layout_ch["barmode"] = "stack"
         fig_ch.update_layout(**layout_ch)
         st.plotly_chart(fig_ch, use_container_width=True, config={"displayModeBar": False})
+
+# ── Revenue Cohort — by aging month ────────────────────────────────────────────
+st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+st.markdown(
+    f"<h3 style='color:{HYPERMINT}; font-size:15px; margin-bottom:4px;'>Revenue Cohort — by Aging Month</h3>"
+    f"<p style='color:#666; font-size:12px; margin-top:0;'>"
+    f"Age 0 = acquisition month itself. Built from UCONNECT_MAY_MERGE + "
+    f"UCONNECT_MAY_MERGE_REVENUE — no dedicated cohort table.</p>",
+    unsafe_allow_html=True,
+)
+
+cohort_df = load_cohort_aging(months_back=13, max_age_months=6)
+
+if not cohort_df.empty:
+    c5, c6 = st.columns(2, gap="medium")
+    with c5:
+        pivot_rev = cohort_df.pivot_table(
+            index="COHORT_MONTH", columns="AGE_MONTHS", values="REVENUE_PER_ACQUIRED", fill_value=0
+        ).sort_index()
+        fig5 = go.Figure(go.Heatmap(
+            z=pivot_rev.values.tolist(),
+            x=[f"Month {a+1}" for a in pivot_rev.columns],
+            y=pivot_rev.index.strftime("%b '%y").tolist(),
+            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, SONIC_BLUE + "99"], [1, HYPERMINT]],
+            hovertemplate="Cohort: %{y}<br>%{x}<br><b>R%{z:,.2f} per acquired</b><extra></extra>",
+            showscale=True,
+        ))
+        layout5 = dict(
+            title=dict(text="Avg Revenue per Acquired — by Cohort Month", font=dict(color=ZERO_WHITE, size=14), x=0),
+            paper_bgcolor=SURFACE_1, plot_bgcolor=SURFACE_1,
+            font=dict(color="#888", size=11), margin=dict(l=8, r=8, t=40, b=8),
+            xaxis=dict(tickfont=dict(size=9, color="#888")),
+            yaxis=dict(tickfont=dict(size=9, color="#888")),
+        )
+        fig5.update_layout(**layout5)
+        st.plotly_chart(fig5, use_container_width=True, config={"displayModeBar": False})
+
+    with c6:
+        pivot_active = cohort_df.pivot_table(
+            index="COHORT_MONTH", columns="AGE_MONTHS", values="ACTIVE", fill_value=0
+        ).sort_index()
+        pivot_acquired = cohort_df.groupby("COHORT_MONTH")["ACQUIRED"].first()
+        pivot_retention = pivot_active.div(pivot_acquired, axis=0) * 100
+        fig6 = go.Figure(go.Heatmap(
+            z=pivot_retention.values.tolist(),
+            x=[f"Month {a+1}" for a in pivot_retention.columns],
+            y=pivot_retention.index.strftime("%b '%y").tolist(),
+            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, HIGHVOLT_ORANGE + "99"], [1, HYPERMINT]],
+            hovertemplate="Cohort: %{y}<br>%{x}<br><b>%{z:.1f}% still transacting</b><extra></extra>",
+            showscale=True,
+        ))
+        layout6 = dict(
+            title=dict(text="% of Cohort Still Transacting — by Aging Month", font=dict(color=ZERO_WHITE, size=14), x=0),
+            paper_bgcolor=SURFACE_1, plot_bgcolor=SURFACE_1,
+            font=dict(color="#888", size=11), margin=dict(l=8, r=8, t=40, b=8),
+            xaxis=dict(tickfont=dict(size=9, color="#888")),
+            yaxis=dict(tickfont=dict(size=9, color="#888")),
+        )
+        fig6.update_layout(**layout6)
+        st.plotly_chart(fig6, use_container_width=True, config={"displayModeBar": False})
+else:
+    placeholder_chart("Revenue Cohort by Aging Month", "No overlapping activation/revenue data", height=310)

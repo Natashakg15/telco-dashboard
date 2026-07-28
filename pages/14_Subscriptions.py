@@ -66,7 +66,8 @@ def load_monthly(w: str):
             SUM(BILLED_AMOUNT_EXCL_VAT) AS BILLED_AMT,
             SUM(PAID_AMOUNT_EXCL_VAT) AS PAID_AMT
         FROM {BILLING_TABLE}
-        WHERE BILLINGDATE >= DATEADD(month,-13,CURRENT_DATE())
+        WHERE ORGANIZATION = 'uconnect'
+          AND BILLINGDATE >= DATEADD(month,-13,CURRENT_DATE())
           AND BILLINGDATE IS NOT NULL
           {w}
         GROUP BY 1,2 ORDER BY 1,2
@@ -83,7 +84,8 @@ def load_kpis(w: str):
             SUM(CASE WHEN DATE_TRUNC('month',BILLINGDATE)=DATE_TRUNC('month',DATEADD(month,-1,CURRENT_DATE())) THEN BILLED_COUNT ELSE 0 END) AS BILLED_LM,
             SUM(CASE WHEN DATE_TRUNC('month',BILLINGDATE)=DATE_TRUNC('month',CURRENT_DATE()) THEN BILLED_AMOUNT_EXCL_VAT ELSE 0 END) AS AMT_MTD
         FROM {BILLING_TABLE}
-        WHERE BILLINGDATE >= DATE_TRUNC('month',DATEADD(month,-1,CURRENT_DATE()))
+        WHERE ORGANIZATION = 'uconnect'
+          AND BILLINGDATE >= DATE_TRUNC('month',DATEADD(month,-1,CURRENT_DATE()))
           {w}
     """)
     df.columns = [c.upper() for c in df.columns]

@@ -54,7 +54,8 @@ def load_cohort(w: str):
             SUM(BILLED_AMOUNT_EXCL_VAT) AS BILLED_AMT,
             SUM(PAID_AMOUNT_EXCL_VAT) AS PAID_AMT
         FROM {BILLING_TABLE}
-        WHERE SALESDATE >= DATEADD(month,-12,CURRENT_DATE())
+        WHERE ORGANIZATION = 'uconnect'
+          AND SALESDATE >= DATEADD(month,-12,CURRENT_DATE())
           AND BILLINGDATE >= DATEADD(month,-12,CURRENT_DATE())
           AND SALESDATE IS NOT NULL
           AND BILLINGDATE IS NOT NULL
@@ -73,7 +74,8 @@ def load_monthly_trend(w: str):
             SUM(BILLED_COUNT) AS BILLED,
             SUM(PAID_COUNT) AS PAID
         FROM {BILLING_TABLE}
-        WHERE BILLINGDATE >= DATEADD(month,-13,CURRENT_DATE())
+        WHERE ORGANIZATION = 'uconnect'
+          AND BILLINGDATE >= DATEADD(month,-13,CURRENT_DATE())
           {w}
         GROUP BY 1,2 ORDER BY 1,2
     """)

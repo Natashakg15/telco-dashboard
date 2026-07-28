@@ -57,10 +57,16 @@ def _load_quality(where_usage: str) -> pd.Series:
     df = run_query(f"""
         SELECT
             SUM(CASE WHEN USAGE_0_30_DAYS = '1'         THEN 1 ELSE 0 END) AS ACTIVE_1_COUNT,
-            SUM(CASE WHEN LASTUSAGEDATETIME IS NULL      THEN 1 ELSE 0 END) AS SIMS_NEVER_USED,
             COUNT(*)                                                         AS TOTAL_SIMS,
             SUM(CASE WHEN USAGE_0_30_DAYS = '1' THEN 1 ELSE 0 END)::FLOAT
                 / NULLIF(COUNT(*), 0)                                        AS ACTIVE_1_PCT,
+            SUM(CASE WHEN DATE(ACCOUNTCREATEDATE) BETWEEN CURRENT_DATE()-60
+                                                      AND CURRENT_DATE()-35
+                          AND DAYS_SINCE_LAST_USAGE = 'SIM Never Used'
+                     THEN 1 ELSE 0 END)                                      AS SIMS_NEVER_USED,
+            SUM(CASE WHEN DATE(ACCOUNTCREATEDATE) BETWEEN CURRENT_DATE()-60
+                                                      AND CURRENT_DATE()-35
+                     THEN 1 ELSE 0 END)                                      AS REGISTERED_BASE_35_60,
             SUM(CASE WHEN DATE(ACCOUNTCREATEDATE) BETWEEN CURRENT_DATE()-35
                                                       AND CURRENT_DATE()-30
                           AND TRY_TO_NUMBER(DAYS_SINCE_LAST_USAGE) <= 7
@@ -74,7 +80,81 @@ def _load_quality(where_usage: str) -> pd.Series:
         WHERE {where_usage}
     """)
     df.columns = [c.upper() for c in df.columns]
-    return df.iloc[0] if not df.empty else pd.Series(dtype=float)
+    if df.empty:
+        return pd.Series(dtype=float)
+    row = df.iloc[0]
+    reg_base = row.get("REGISTERED_BASE_35_60")
+    row["SIMS_NEVER_USED_PCT"] = (
+        row.get("SIMS_NEVER_USED", 0) / reg_base if reg_base else None
+    )
+    return row
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def _load_ros_7day(where_merge: str, excluded_stores: tuple) -> float | None:
+    """
+    ROS (Rate of Sale) 7-day avg — matches PBIX 'ROS_L7 DAYS SQL <tenant>' native queries:
+    distinct activating accounts over a trailing 7-calendar-day window (today-6..today),
+    divided by 6. Only defined in the source model for Spar, Build It, Pet Pool, Fashion Fusion.
+    """
+    excl_clause = ""
+    if excluded_stores:
+        vals = ", ".join("'" + s.replace("'", "''") + "'" for s in excluded_stores)
+        excl_clause = f"AND TENANT NOT IN ({vals})"
+    df = run_query(f"""
+        SELECT ROUND(COUNT(DISTINCT ACCOUNT_NUMBER) / 6.0, 2) AS ROS_7_DAYS
+        FROM {MERGE_TABLE}
+        WHERE ({where_merge})
+          AND MASTER_TENANT = 'uConnect'
+          {excl_clause}
+          AND ACTIVATION_DATE BETWEEN DATEADD(day, -6, CURRENT_DATE()) AND CURRENT_DATE()
+    """)
+    df.columns = [c.upper() for c in df.columns]
+    if df.empty:
+        return None
+    val = df.iloc[0].get("ROS_7_DAYS")
+    return None if val is None or pd.isna(val) else float(val)
+
+
+# Rate of Sale flag thresholds — verified from the PBIX's native ROS_L7 DAYS SQL <tenant> queries.
+# Not defined in the source model for the other 4 scorecards (Mica, Aheers, Progas, Midas).
+ROS_THRESHOLD = {
+    "Spar": 30,
+    "Build It": 26,
+    "Pet Pool & Home": 20,
+    "Fashion Fusion": 30,
+}
+
+# Store exclusion lists — verified from the same queries (store-level opt-outs, e.g. duplicates
+# or "DO NOT USE" entries). Pet Pool and Fashion Fusion have none defined in the source.
+ROS_EXCLUDED_STORES = {
+    "Spar": (
+        "Spar Mbazwana", "Spar Kei (Spargs)", "Spar Jozini", "Spar Durban Central",
+        "Spar Mandini Tops(DO NOT USE FOR ANYTHING)", "Spar Ephondweni", "Spar Avonmore",
+        "Spar Hlabisa", "Spar KosiBay", "Spar Mtunzini", "Spar Kensington",
+        "Spar Ikwezi (Spargs)", "Spar Bhambanana", "Spar Dutywa 2 (Spargs)",
+        "Spar Mandini (Foodlovers)", "Spar Bhambanana 2", "Spar Mduku", "Spar Shaluza",
+        "Spar Nyakaza", "Savemor Bhambanana 2", "Spar Ingwavuma", "Spar Ndumu",
+        "Spar Pongola", "Spar Spencers (Spargs)", "Spar Umzimkhulu", "Spar Beacon Bay (Spargs)",
+        "Spar Beacon Bay 2 (Spargs)", "Spar Belair", "Spar Duzi", "Spar Golden Gate",
+        "Spar Harding", "Spar Hibberdene", "Spar Ixopo", "Spar Knowles", "Spar Manaba",
+        "Spar Marina", "Spar Olivedale", "Spar Parys", "Spar Phoenix", "Spar Saint George",
+        "Spar Seapoint", "Spar Selgro", "Spar Sutherland 2 (Spargs)", "Spar Umkomaas",
+        "Spar Umlazi", "Spar Waterloo", "Spar West Street", "Spar Winklespruit",
+    ),
+    "Build It": ("Bothas Hill", "Cullinan", "KwaMlanga", "Mthatha (Spargs)", "Southway Mall"),
+    "Pet Pool & Home": (),
+    "Fashion Fusion": (),
+}
+
+# Cost-of-wastage unit rates (Rand per SIM never used, +6 fixed) — verified from the PBIX
+# 'Cost of Wastage <tenant>' measures. Only Spar and Build It among the 8 scorecards have a
+# rate defined in the source model; Savemor's rate (15.07) is distinct from Spar's (16.69) but
+# this dashboard's Spar page already groups Savemor into "Spar", matching the existing where_merge.
+WASTAGE_RATE = {
+    "Spar": 16.69,
+    "Build It": 18.50,
+}
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
@@ -230,6 +310,10 @@ def render_scorecard(cfg: dict):
         daily_df   = _load_daily(where_merge)
         quality    = _load_quality(where_usage)
         store_df   = _load_stores(where_merge)
+        ros_7day   = (
+            _load_ros_7day(where_merge, ROS_EXCLUDED_STORES.get(name, ()))
+            if name in ROS_THRESHOLD else None
+        )
 
     monthly_df["MONTH_START"]   = pd.to_datetime(monthly_df["MONTH_START"])
     daily_df["ACTIVATION_DATE"] = pd.to_datetime(daily_df["ACTIVATION_DATE"])
@@ -248,11 +332,36 @@ def render_scorecard(cfg: dict):
     k1.metric("This Month",      f"{this_month:,}")
     k2.metric("Last Month",      f"{last_month:,}", delta=f"{mom_delta:+,}")
     k3.metric("Active 1 %",      _fmt_pct(quality.get("ACTIVE_1_PCT")))
-    k4.metric("SIMs Never Used", f'{int(quality.get("SIMS_NEVER_USED", 0) or 0):,}')
+    snu_count = int(quality.get("SIMS_NEVER_USED", 0) or 0)
+    k4.metric(
+        "SIMs Never Used (35-60d)", f"{snu_count:,}",
+        help="Accounts created 35-60 days ago with no usage since — matches the PBIX definition "
+             "(previously this card used a different, unwindowed condition).",
+        delta=_fmt_pct(quality.get("SIMS_NEVER_USED_PCT")), delta_color="off",
+    )
     with k5:
         _placeholder_card("QOS 7-Day Avg", "NEW QOS table")
     with k6:
-        _placeholder_card("ROS 7-Day Avg", "ROS_L7 DAYS SQL BI")
+        if ros_7day is not None:
+            threshold = ROS_THRESHOLD[name]
+            at_risk = ros_7day < threshold
+            k6.metric(
+                "ROS 7-Day Avg", f"{ros_7day:,.2f}",
+                help=f"Distinct activations over the trailing 7 days, ÷6. Flagged if below {threshold}.",
+                delta="Below threshold" if at_risk else "On target",
+                delta_color="inverse" if at_risk else "normal",
+            )
+        else:
+            _placeholder_card("ROS 7-Day Avg", "ROS_L7 DAYS SQL — not built for this tenant")
+
+    wastage_rate = WASTAGE_RATE.get(name)
+    if wastage_rate is not None:
+        wk1, _ = st.columns([1, 5])
+        wk1.metric(
+            "Cost of Wastage", f"R{(snu_count * wastage_rate + 6):,.0f}",
+            help=f"(SIMs Never Used × R{wastage_rate}) + R6 fixed cost — matches the PBIX "
+                 f"'Cost of Wastage {name}' measure.",
+        )
 
     st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
 

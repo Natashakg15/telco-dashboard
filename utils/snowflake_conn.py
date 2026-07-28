@@ -124,6 +124,10 @@ def _demo_query(sql: str) -> pd.DataFrame:
                 })
         return pd.DataFrame(rows)
 
+    # Rate of Sale 7-day avg (scorecard) — must precede the generic daily-activations check below
+    if "ROS_7_DAYS" in sql_up:
+        return pd.DataFrame({"ROS_7_DAYS": [34.5]})
+
     # Daily activations
     if "ACTIVATION_DATE" in sql_up and "COUNT" in sql_up:
         rng = pd.date_range(end=today, periods=395, freq="D")
@@ -144,6 +148,18 @@ def _demo_query(sql: str) -> pd.DataFrame:
             "TENANT":     _TENANTS,
             "LAST_MONTH": last,
             "THIS_MONTH": this,
+        })
+
+    # Spar / scorecard SIM quality (ACTIVE_1_COUNT, SIMS_NEVER_USED, etc.) — must precede the
+    # Sales Trends SNU-by-day check below, since this query's SQL also contains "SIMS_NEVER_USED"
+    if "ACCOUNTCREATEDATE" in sql_up and "ACTIVE_1_COUNT" in sql_up:
+        return pd.DataFrame({
+            "ACTIVE_1_COUNT":          [8200],
+            "SIMS_NEVER_USED":         [1400],
+            "REGISTERED_BASE_35_60":   [9800],
+            "TOTAL_SIMS":              [11000],
+            "ACTIVE_1_PCT":            [0.745],
+            "QOS_PROXY_PCT":           [0.63],
         })
 
     # SNU + Active 1 by activation date (Sales Trends page)
@@ -169,16 +185,6 @@ def _demo_query(sql: str) -> pd.DataFrame:
             "DT":           rng,
             "ACTIVATIONS":  activations,
             "ACTIVE1_PCT":  active1_pct,
-        })
-
-    # Spar / scorecard SIM quality (ACTIVE_1_COUNT, SIMS_NEVER_USED, etc.)
-    if "ACCOUNTCREATEDATE" in sql_up and "ACTIVE_1_COUNT" in sql_up:
-        return pd.DataFrame({
-            "ACTIVE_1_COUNT":   [8200],
-            "SIMS_NEVER_USED":  [1400],
-            "TOTAL_SIMS":       [11000],
-            "ACTIVE_1_PCT":     [0.745],
-            "QOS_PROXY_PCT":    [0.63],
         })
 
     # Active subscriptions — KPI aggregates

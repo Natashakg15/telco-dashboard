@@ -15,6 +15,7 @@ from utils.snowflake_conn import run_query
 from utils.page_helpers import placeholder_chart
 
 REV_TABLE = "UCONNECT_DW.ANALYTICS.UCONNECT_MAY_MERGE_REVENUE"
+USAGE_TABLE = "UCONNECT_DW.ANALYTICS.VW_ACTIVE_SUBSCRIPTIONS_USAGE_DETAILS"
 
 st.set_page_config(page_title="Retain Users via Free Airtime | Telco Retail", page_icon="🎁", layout="wide")
 inject_css()
@@ -86,16 +87,89 @@ with c2:
     fig2.update_layout(**layout2)
     st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_retention_by_reward():
+    df = run_query(f"""
+        SELECT
+            CASE WHEN r.ACCOUNT_NUMBER IS NOT NULL THEN 'Reward Recipient' ELSE 'No Reward' END AS GRP,
+            COUNT(*) AS TOTAL,
+            SUM(CASE WHEN TRY_TO_NUMBER(u.DAYS_SINCE_LAST_USAGE) <= 7 THEN 1 ELSE 0 END) AS STILL_ACTIVE
+        FROM {USAGE_TABLE} u
+        LEFT JOIN (
+            SELECT DISTINCT TRY_TO_NUMBER(ACCOUNT_NUMBER) AS ACCOUNT_NUMBER
+            FROM {REV_TABLE}
+            WHERE REVENUE_PAID_FOR_REWARDS_VALUE > 0
+        ) r ON u.ACCOUNT_NUMBER = r.ACCOUNT_NUMBER
+        GROUP BY 1
+    """)
+    df.columns = [c.upper() for c in df.columns]
+    return df
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_revenue_per_recipient(months_back: int = 6):
+    df = run_query(f"""
+        WITH RECIP AS (
+            SELECT DISTINCT DATE_TRUNC('month', TRANSACTION_DATE) AS MONTH_START, ACCOUNT_NUMBER
+            FROM {REV_TABLE}
+            WHERE REVENUE_PAID_FOR_REWARDS_VALUE > 0
+              AND TRANSACTION_DATE >= DATEADD(month,-{months_back},CURRENT_DATE())
+        ),
+        ALL_REV AS (
+            SELECT DATE_TRUNC('month', TRANSACTION_DATE) AS MONTH_START, ACCOUNT_NUMBER,
+                COALESCE(REVENUE_CELLC_RECHARGE_VALUE,0) + COALESCE(REVENUE_APP_PURCHASES_VALUE,0)
+              + COALESCE(REVENUE_MAY_BILLRUN_VALUE,0) + COALESCE(REVENUE_POST_PAID_SUCCESSFULL_VALUE,0)
+              + COALESCE(REVENUE_RETAIL_VOUCHER_REDEMPTIONS_VALUE,0) AS REV
+            FROM {REV_TABLE}
+            WHERE TRANSACTION_DATE >= DATEADD(month,-{months_back},CURRENT_DATE())
+        )
+        SELECT R.MONTH_START, COUNT(DISTINCT R.ACCOUNT_NUMBER) AS RECIPIENTS, SUM(A.REV) AS RECIPIENT_REVENUE
+        FROM RECIP R
+        LEFT JOIN ALL_REV A ON R.ACCOUNT_NUMBER = A.ACCOUNT_NUMBER AND R.MONTH_START = A.MONTH_START
+        GROUP BY 1 ORDER BY 1
+    """)
+    df.columns = [c.upper() for c in df.columns]
+    df["MONTH_START"] = pd.to_datetime(df["MONTH_START"])
+    df["REVENUE_PER_RECIPIENT"] = (df["RECIPIENT_REVENUE"] / df["RECIPIENTS"].replace(0, float("nan"))).round(2)
+    return df
+
+
 c3, c4 = st.columns(2, gap="medium")
 with c3:
-    placeholder_chart(
-        "Retention Rate for Reward Recipients",
-        "CDR / usage + rewards join — pending data access",
-        height=300,
-    )
+    retention_df = load_retention_by_reward()
+    if not retention_df.empty:
+        retention_df["RETENTION_PCT"] = (
+            retention_df["STILL_ACTIVE"] / retention_df["TOTAL"].replace(0, float("nan")) * 100
+        ).round(1)
+        fig3 = go.Figure(go.Bar(
+            x=retention_df["GRP"].tolist(), y=retention_df["RETENTION_PCT"].tolist(),
+            marker_color=[HYPERMINT, HIGHVOLT_ORANGE], marker_line_width=0,
+            text=[f"{v:.1f}%" for v in retention_df["RETENTION_PCT"]],
+            textposition="outside",
+            hovertemplate="%{x}<br><b>%{y:.1f}% still active (last 7 days)</b><extra></extra>",
+        ))
+        layout3 = _base("Retention Rate: Reward Recipients vs No Reward")
+        layout3["yaxis"] = dict(showgrid=True, gridcolor=BORDER, ticksuffix="%", range=[0, 100])
+        fig3.update_layout(**layout3)
+        st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
+        st.caption("\"Still active\" = usage recorded in the last 7 days, from VW_ACTIVE_SUBSCRIPTIONS_USAGE_DETAILS.")
+    else:
+        placeholder_chart("Retention Rate for Reward Recipients", "No data returned", height=300)
+
 with c4:
-    placeholder_chart(
-        "Reward ROI — Revenue per Reward Recipient",
-        "Cohort revenue + REVENUE_PAID_FOR_REWARDS join — pending cohort table",
-        height=300,
-    )
+    roi_df = load_revenue_per_recipient(months_back=6)
+    if not roi_df.empty:
+        fig4 = go.Figure(go.Scatter(
+            x=roi_df["MONTH_START"].dt.strftime("%b '%y").tolist(),
+            y=roi_df["REVENUE_PER_RECIPIENT"].tolist(),
+            mode="lines+markers", line=dict(color=ULTRAVIOLET, width=2),
+            hovertemplate="%{x}<br><b>R%{y:,.2f} per recipient</b><extra></extra>",
+        ))
+        layout4 = _base("Revenue per Reward Recipient — Monthly")
+        layout4["yaxis"]["tickprefix"] = "R"
+        layout4["yaxis"]["tickformat"] = ",.2f"
+        fig4.update_layout(**layout4)
+        st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
+        st.caption("Revenue = same-month non-reward revenue from accounts that received a reward that month.")
+    else:
+        placeholder_chart("Reward ROI — Revenue per Reward Recipient", "No data returned", height=300)

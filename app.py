@@ -90,7 +90,10 @@ NAVIGABLE_PAGES = {
     "↳ Midas":                            "pages/10_Midas_Scorecard.py",
     # Subscriptions
     "Subscriptions":                      "pages/14_Subscriptions.py",
+    "↳ Telesales · App · WhatsApp · BTL": "pages/14_Subscriptions.py",
+    "↳ Mobile Store · Mobile Store DigiM VAS": "pages/14_Subscriptions.py",
     "Subscriptions Cohort Analysis":      "pages/15_Subscriptions_Cohort.py",
+    "↳ Telesales Billed/Paid · App Billed/Paid": "pages/15_Subscriptions_Cohort.py",
     # Commercial
     "Commercial Cohort Analysis":         "pages/16_Commercial_Cohort.py",
     "Wastage":                            "pages/17_Wastage.py",

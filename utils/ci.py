@@ -177,6 +177,14 @@ PAGE_CSS = f"""
       display: none !important;
   }}
 
+  /* stSidebarContent stretches to fill the viewport by default, leaving a
+     tall empty gap below our short custom sidebar content once the auto
+     nav above is hidden - collapse it to fit its actual content instead. */
+  section[data-testid="stSidebar"] div[data-testid="stSidebarContent"] {{
+      height: auto !important;
+      min-height: 0 !important;
+  }}
+
   /* ── Page link — menu cards (plain text style) ── */
   [data-testid="stPageLink"] {{
       margin: 0 !important;

@@ -31,15 +31,16 @@ def load_monthly():
             SUM(COALESCE(REVENUE_APP_PURCHASES_VALUE,0))              AS APP,
             SUM(COALESCE(REVENUE_MAY_BILLRUN_VALUE,0))                AS BILLRUN,
             SUM(COALESCE(REVENUE_POST_PAID_SUCCESSFULL_VALUE,0))      AS POSTPAID,
-            SUM(COALESCE(REVENUE_WHATSAPP_PURCHASES_VALUE,0))         AS WHATSAPP,
             SUM(COALESCE(REVENUE_MAY_WEBSITE_RECHARGES_VALUE,0))      AS WEBSITE,
+            -- REVENUE_WHATSAPP_PURCHASES_VALUE excluded: corrupted for every row of
+            -- WALLET='Recharge Wallet - Customer WhatsApp purchases' (~1e18-1e19 magnitude,
+            -- confirmed 2023-09 through 2026-07) - needs an upstream ETL fix first.
             SUM(
                 COALESCE(REVENUE_CELLC_RECHARGE_VALUE,0)
               + COALESCE(REVENUE_RETAIL_VOUCHER_REDEMPTIONS_VALUE,0)
               + COALESCE(REVENUE_APP_PURCHASES_VALUE,0)
               + COALESCE(REVENUE_MAY_BILLRUN_VALUE,0)
               + COALESCE(REVENUE_POST_PAID_SUCCESSFULL_VALUE,0)
-              + COALESCE(REVENUE_WHATSAPP_PURCHASES_VALUE,0)
               + COALESCE(REVENUE_MAY_WEBSITE_RECHARGES_VALUE,0)
             ) AS TOTAL_REVENUE
         FROM {REV_TABLE}
@@ -87,7 +88,6 @@ with c1:
         ("Postpaid",        "POSTPAID", ULTRAVIOLET),
         ("App",             "APP", HIGHVOLT_ORANGE),
         ("Voucher",         "VOUCHER", "#9b59b6"),
-        ("WhatsApp",        "WHATSAPP", "#f1c40f"),
         ("Website",         "WEBSITE", "#1abc9c"),
     ]
     for name, col, colour in streams:
@@ -116,11 +116,11 @@ st.markdown(
 )
 display = df.copy()
 display["MONTH_START"] = display["MONTH_START"].dt.strftime("%b '%y")
-cols_show = ["MONTH_START","CELLC","BILLRUN","POSTPAID","APP","VOUCHER","WHATSAPP","WEBSITE","TOTAL_REVENUE"]
+cols_show = ["MONTH_START","CELLC","BILLRUN","POSTPAID","APP","VOUCHER","WEBSITE","TOTAL_REVENUE"]
 display = display[[c for c in cols_show if c in display.columns]]
 rename = {
     "MONTH_START":"Month","CELLC":"Cell C","BILLRUN":"Billrun","POSTPAID":"Postpaid",
-    "APP":"App","VOUCHER":"Voucher","WHATSAPP":"WhatsApp","WEBSITE":"Website","TOTAL_REVENUE":"Total"
+    "APP":"App","VOUCHER":"Voucher","WEBSITE":"Website","TOTAL_REVENUE":"Total"
 }
 display = display.rename(columns=rename).sort_values("Month", ascending=False)
 for col in [c for c in display.columns if c != "Month"]:

@@ -27,13 +27,15 @@ def load_monthly():
     df = run_query(f"""
         SELECT
             DATE_TRUNC('month', TRANSACTION_DATE) AS MONTH_START,
+            -- REVENUE_WHATSAPP_PURCHASES_VALUE excluded: corrupted for every row of
+            -- WALLET='Recharge Wallet - Customer WhatsApp purchases' (~1e18-1e19 magnitude,
+            -- confirmed 2023-09 through 2026-07) - needs an upstream ETL fix first.
             SUM(
                 COALESCE(REVENUE_CELLC_RECHARGE_VALUE,0)
               + COALESCE(REVENUE_RETAIL_VOUCHER_REDEMPTIONS_VALUE,0)
               + COALESCE(REVENUE_APP_PURCHASES_VALUE,0)
               + COALESCE(REVENUE_MAY_BILLRUN_VALUE,0)
               + COALESCE(REVENUE_POST_PAID_SUCCESSFULL_VALUE,0)
-              + COALESCE(REVENUE_WHATSAPP_PURCHASES_VALUE,0)
               + COALESCE(REVENUE_MAY_WEBSITE_RECHARGES_VALUE,0)
             ) AS TOTAL_REVENUE,
             SUM(COALESCE(REVENUE_CELLC_RECHARGE_VALUE,0))             AS CELLC,

@@ -1,0 +1,33 @@
+snapshot_date,stage,sort,category,count
+2026-02-23,Initial contact made with company,1,Build It Stores,36
+2026-02-23,Initial contact made with company,1,Retail Brands,12
+2026-02-23,Initial contact made with company,1,Spar Stores,2
+2026-02-23,Initial contact made with company,1,Unspecified,1
+2026-02-23,Initial contact made with company,1,Debit Order Brands,2
+2026-02-23,Initial conversation had with decision maker,2,Retail Brands,5
+2026-02-23,Initial conversation had with decision maker,2,Build It Stores,1
+2026-02-23,Initial conversation had with decision maker,2,Mica,1
+2026-02-23,Initial Meeting had with decision maker,3,Build It Stores,3
+2026-02-23,Initial Meeting had with decision maker,3,Retail Brands,11
+2026-02-23,Formal proposal presented,4,Build It Stores,7
+2026-02-23,Formal proposal presented,4,Debit Order Brands,2
+2026-02-23,Formal proposal presented,4,Retail Brands,4
+2026-02-23,Formal proposal presented,4,Mica,1
+2026-02-23,"Proposal accepted, awaiting implementation",5,Retail Brands,3
+2026-02-23,"Proposal accepted, awaiting implementation",5,Debit Order Brands,1
+2026-02-23,"Proposal accepted, awaiting implementation",5,Build It Stores,1
+2026-02-23,In implementation,6,Spar Stores,1
+2026-02-23,In implementation,6,Retail Brands,1
+2026-02-23,In implementation,6,Mica,1
+2026-02-23,In implementation,6,Build It Stores,2
+2026-02-23,In implementation,6,Unspecified,1
+2026-02-23,Live and Trading,8,Build It Stores,62
+2026-02-23,Live and Trading,8,Debit Order Brands,4
+2026-02-23,Live and Trading,8,Retail Brands,10
+2026-02-23,Live and Trading,8,Spar Stores,2
+2026-02-23,Live and Trading,8,Mica,2
+2026-02-23,Not interested or deal lost,7,Unspecified,4
+2026-02-23,Not interested or deal lost,7,Build It Stores,29
+2026-02-23,Not interested or deal lost,7,Debit Order Brands,29
+2026-02-23,Not interested or deal lost,7,Retail Brands,75
+2026-02-23,Not interested or deal lost,7,Spar Stores,8

@@ -6,6 +6,7 @@ High-level KPIs for Exco / board view.
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import os
 
 from utils.ci import (
     inject_css, page_header,
@@ -243,3 +244,46 @@ with c4:
             bargap=0.3,
         )
         st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
+
+# ── Employee NPS ────────────────────────────────────────────────────────────────
+st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+st.markdown(
+    f"<h3 style='color:{HYPERMINT}; font-size:15px; margin-bottom:4px;'>Employee NPS</h3>"
+    f"<p style='color:#666; font-size:12px; margin-top:0;'>"
+    f"Source: quarterly survey, hand-maintained on SharePoint (ENPS Feedback.xlsx) — "
+    f"one-time pull, not a live connection.</p>",
+    unsafe_allow_html=True,
+)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_enps():
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "enps_feedback.csv")
+    return pd.read_csv(path).sort_values("sort")
+
+
+enps_df = load_enps()
+# FY25 Q3 reads as 0 in the source, which almost certainly means "not yet surveyed"
+# rather than a genuine eNPS crash - flag it rather than plot it as a real score.
+enps_df["is_pending"] = (enps_df["enps"] == 0) & (enps_df["sort"] == enps_df["sort"].max())
+
+e1, e2 = st.columns([1, 2], gap="medium")
+with e1:
+    latest_real = enps_df[~enps_df["is_pending"]].iloc[-1] if not enps_df[~enps_df["is_pending"]].empty else None
+    if latest_real is not None:
+        st.metric(f"Latest eNPS ({latest_real['survey_period']})", f"{int(latest_real['enps'])}")
+    if enps_df["is_pending"].any():
+        pending_row = enps_df[enps_df["is_pending"]].iloc[0]
+        st.caption(f"{pending_row['survey_period']} shows 0 in the source — likely not yet surveyed, not a real score.")
+
+with e2:
+    colors = [BORDER if p else HYPERMINT for p in enps_df["is_pending"]]
+    fig_enps = go.Figure(go.Bar(
+        x=enps_df["survey_period"].tolist(), y=enps_df["enps"].tolist(),
+        marker_color=colors, marker_line_width=0,
+        text=["pending" if p else str(int(v)) for p, v in zip(enps_df["is_pending"], enps_df["enps"])],
+        textposition="outside",
+        hovertemplate="%{x}<br><b>%{y}</b><extra></extra>",
+    ))
+    fig_enps.update_layout(**_base("Employee NPS by Quarter"))
+    st.plotly_chart(fig_enps, use_container_width=True, config={"displayModeBar": False})

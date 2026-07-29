@@ -233,7 +233,7 @@ for idx, section in enumerate(SECTIONS):
             slug = NAVIGABLE_PAGES[name].split("/")[-1].replace(".py", "").lstrip("0123456789_")
             return (
                 f"<li style='padding:2px 0; {indent}'>"
-                f"<a href='?go={slug}' style='color:{HYPERMINT}; font-weight:600; "
+                f"<a href='?go={slug}' style='color:{ZERO_WHITE}; font-weight:600; "
                 f"font-size:13px; text-decoration:none;'>{name}</a></li>"
             )
         color = "#555" if is_sub else "#888"

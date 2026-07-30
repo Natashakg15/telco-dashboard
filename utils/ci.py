@@ -69,6 +69,12 @@ PAGE_CSS = f"""
   section[data-testid="stSidebar"] * {{
       color: {ZERO_WHITE} !important;
   }}
+  /* Dark logo pill inside the sidebar needs light text - a class selector
+     beats the universal "*" rule above regardless of source order. */
+  section[data-testid="stSidebar"] .spot-logo-pill,
+  section[data-testid="stSidebar"] .spot-logo-pill * {{
+      color: {ON_DARK_TEXT} !important;
+  }}
 
   /* ── Metric cards — dark stat tiles, matching the reference dashboards ──
      NOTE: Streamlit 1.60's DOM uses data-testid="stMetric" (label/value are

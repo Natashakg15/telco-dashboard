@@ -227,6 +227,10 @@ def _demo_query(sql: str) -> pd.DataFrame:
             "SIMS": [71000, 18000, 5100],
         })
 
+    # Last data refresh timestamp (home page indicator)
+    if "MINUTES_AGO" in sql_up:
+        return pd.DataFrame({"LAST_REFRESH": ["demo"], "MINUTES_AGO": [0]})
+
     # Churn by reason
     if "CHURN_COUNT" in sql_up:
         return pd.DataFrame({

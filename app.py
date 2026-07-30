@@ -2,8 +2,48 @@
 Telco Retail Dashboard — Menu / Home Page
 Spot CI  ·  Pack v1  ·  40 pages
 """
+from datetime import datetime, timedelta, timezone
+
 import streamlit as st
-from utils.ci import inject_css, HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE, INKCORE, SURFACE_1, SURFACE_2, BORDER, ZERO_WHITE
+from utils.ci import (
+    inject_css, HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE, INKCORE,
+    SURFACE_1, SURFACE_2, BORDER, ZERO_WHITE, ON_DARK_TEXT,
+)
+from utils.snowflake_conn import run_query, MERGE_TABLE
+
+SAST = timezone(timedelta(hours=2))
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_last_refresh():
+    """Real data-freshness indicator: latest UPDATE_TIMESTAMP actually written
+    to UCONNECT_MAY_MERGE, not just when this page happened to render."""
+    df = run_query(f"""
+        SELECT
+            TO_VARCHAR(MAX(UPDATE_TIMESTAMP), 'YYYY-MM-DD"T"HH24:MI:SS') AS LAST_REFRESH,
+            DATEDIFF('minute', MAX(UPDATE_TIMESTAMP), CURRENT_TIMESTAMP()) AS MINUTES_AGO
+        FROM {MERGE_TABLE}
+    """)
+    df.columns = [c.upper() for c in df.columns]
+    if df.empty or df.iloc[0]["LAST_REFRESH"] == "demo":
+        return None
+    return {
+        "timestamp_utc": datetime.strptime(df.iloc[0]["LAST_REFRESH"], "%Y-%m-%dT%H:%M:%S"),
+        "minutes_ago": int(df.iloc[0]["MINUTES_AGO"]),
+    }
+
+
+def _format_ago(minutes: int) -> str:
+    if minutes < 1:
+        return "just now"
+    if minutes < 60:
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    days = hours // 24
+    return f"{days} day{'s' if days != 1 else ''} ago"
+
 
 st.set_page_config(
     page_title="Telco Retail | Spot Dashboard",
@@ -18,10 +58,13 @@ with st.sidebar:
     st.markdown(
         f"""
         <div style='text-align:center; padding: 24px 0 16px 0;'>
-            <div style='font-size:28px; font-weight:800; color:{HYPERMINT};
-                        letter-spacing:-0.03em;'>SPOT</div>
+            <span class='spot-logo-pill' style='background:{INKCORE}; font-weight:800;
+                         font-size:16px; padding:7px 16px; border-radius:20px;
+                         letter-spacing:-0.02em; display:inline-block;'>
+                Spot<sup style='font-size:9px; font-weight:700;'>™</sup>
+            </span>
             <div style='font-size:11px; color:#666; letter-spacing:0.12em;
-                        text-transform:uppercase; margin-top:2px;'>Connect</div>
+                        text-transform:uppercase; margin-top:8px;'>Connect</div>
         </div>
         <hr style='border-color:{BORDER}; margin:0 0 16px 0;'/>
         """,
@@ -29,10 +72,29 @@ with st.sidebar:
     )
     st.caption("Use the pages listed below the menu to navigate the dashboard.")
 
+# ── Refresh indicator (top-right, real Snowflake data freshness) ──────────────
+refresh = load_last_refresh()
+_, refresh_col = st.columns([3, 2])
+with refresh_col:
+    if refresh:
+        sast_time = refresh["timestamp_utc"].replace(tzinfo=timezone.utc).astimezone(SAST)
+        st.markdown(
+            f"<div style='text-align:right; font-size:12px; color:#666; padding-top:12px;'>"
+            f"<span style='color:{HYPERMINT};'>●</span> Refreshed {_format_ago(refresh['minutes_ago'])} "
+            f"&nbsp;·&nbsp; {sast_time.strftime('%d %b %Y at %H:%M')} SAST</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f"<div style='text-align:right; font-size:12px; color:#666; padding-top:12px;'>"
+            f"<span style='color:#999;'>●</span> Demo data — not live</div>",
+            unsafe_allow_html=True,
+        )
+
 # ── Hero header ───────────────────────────────────────────────────────────────
 st.markdown(
     f"""
-    <div style='padding: 48px 0 8px 0;'>
+    <div style='padding: 8px 0 8px 0;'>
         <div style='font-size: 13px; color:#666; letter-spacing:0.14em;
                     text-transform:uppercase; margin-bottom:8px;'>
             SPOT CONNECT

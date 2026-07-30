@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from utils.ci import (
     inject_css, page_header,
     HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE,
-    SURFACE_1, BORDER, ZERO_WHITE, CHART_PALETTE,
+    SURFACE_1, BORDER, ZERO_WHITE, CHART_PALETTE, hex_to_rgba,
 )
 from utils.snowflake_conn import run_query
 from utils.page_helpers import placeholder_chart
@@ -128,7 +128,7 @@ with c2:
             z=cohort_pivot.values.tolist(),
             x=cohort_pivot.columns.strftime("%b '%y").tolist(),
             y=cohort_pivot.index.strftime("%b '%y").tolist(),
-            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, SONIC_BLUE + "99"], [1, HYPERMINT]],
+            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, hex_to_rgba(SONIC_BLUE, 0.6)], [1, HYPERMINT]],
             hovertemplate="Acquired: %{y}<br>Billed: %{x}<br><b>Count: %{z:,}</b><extra></extra>",
             showscale=True,
         ))

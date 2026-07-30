@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from utils.ci import (
     inject_css, page_header,
     HYPERMINT, SONIC_BLUE, ULTRAVIOLET, HIGHVOLT_ORANGE,
-    SURFACE_1, BORDER, ZERO_WHITE, CHART_PALETTE,
+    SURFACE_1, BORDER, ZERO_WHITE, CHART_PALETTE, hex_to_rgba,
 )
 from utils.snowflake_conn import run_query, MERGE_TABLE
 from utils.page_helpers import placeholder_chart
@@ -184,7 +184,7 @@ if not cohort_df.empty:
             z=pivot_rev.values.tolist(),
             x=[f"Month {a+1}" for a in pivot_rev.columns],
             y=pivot_rev.index.strftime("%b '%y").tolist(),
-            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, SONIC_BLUE + "99"], [1, HYPERMINT]],
+            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, hex_to_rgba(SONIC_BLUE, 0.6)], [1, HYPERMINT]],
             hovertemplate="Cohort: %{y}<br>%{x}<br><b>R%{z:,.2f} per acquired</b><extra></extra>",
             showscale=True,
         ))
@@ -208,7 +208,7 @@ if not cohort_df.empty:
             z=pivot_retention.values.tolist(),
             x=[f"Month {a+1}" for a in pivot_retention.columns],
             y=pivot_retention.index.strftime("%b '%y").tolist(),
-            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, HIGHVOLT_ORANGE + "99"], [1, HYPERMINT]],
+            colorscale=[[0, "rgba(0,0,0,0)"], [0.5, hex_to_rgba(HIGHVOLT_ORANGE, 0.6)], [1, HYPERMINT]],
             hovertemplate="Cohort: %{y}<br>%{x}<br><b>%{z:.1f}% still transacting</b><extra></extra>",
             showscale=True,
         ))

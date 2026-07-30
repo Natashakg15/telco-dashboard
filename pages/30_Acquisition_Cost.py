@@ -127,13 +127,12 @@ with c1:
         yaxis="y2",
         hovertemplate="%{x}<br><b>%{y:,} rewards</b><extra></extra>",
     ))
-    fig.update_layout(
-        **_base("Activations vs Reward Qty — 13 Months"),
-        yaxis2=dict(overlaying="y", side="right", showgrid=False, tickformat=",",
-                    title=dict(text="Rewards Paid", font=dict(color=HIGHVOLT_ORANGE, size=11))),
-        yaxis=dict(showgrid=True, gridcolor=BORDER, tickformat=",",
-                   title=dict(text="Activations", font=dict(color=HYPERMINT, size=11))),
-    )
+    layout1 = _base("Activations vs Reward Qty — 13 Months")
+    layout1["yaxis"] = dict(showgrid=True, gridcolor=BORDER, tickformat=",",
+                             title=dict(text="Activations", font=dict(color=HYPERMINT, size=11)))
+    layout1["yaxis2"] = dict(overlaying="y", side="right", showgrid=False, tickformat=",",
+                              title=dict(text="Rewards Paid", font=dict(color=HIGHVOLT_ORANGE, size=11)))
+    fig.update_layout(**layout1)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 with c2:

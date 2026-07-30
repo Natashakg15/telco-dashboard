@@ -110,13 +110,11 @@ with c2:
         x=x, y=merged["PAYING_ACCOUNTS"].tolist(), name="Paying Accounts",
         marker_color=SONIC_BLUE, marker_line_width=0, opacity=0.5, yaxis="y2",
     ))
-    fig2.update_layout(
-        **_base("ARPU vs Paying Accounts"),
-        yaxis=dict(title="ARPU (R)", tickprefix="R", tickformat=",.2f", showgrid=True, gridcolor=BORDER),
-        yaxis2=dict(title="Paying Accounts", overlaying="y", side="right", showgrid=False, tickformat=","),
-        legend=dict(orientation="h", y=1.08, font=dict(color=ZERO_WHITE, size=11), bgcolor="rgba(0,0,0,0)"),
-        hovermode="x unified", barmode="overlay",
-    )
+    layout2 = _base("ARPU vs Paying Accounts")
+    layout2["yaxis"] = dict(title="ARPU (R)", tickprefix="R", tickformat=",.2f", showgrid=True, gridcolor=BORDER)
+    layout2["yaxis2"] = dict(title="Paying Accounts", overlaying="y", side="right", showgrid=False, tickformat=",")
+    layout2["legend"] = dict(orientation="h", y=1.08, font=dict(color=ZERO_WHITE, size=11), bgcolor="rgba(0,0,0,0)")
+    fig2.update_layout(**layout2, hovermode="x unified", barmode="overlay")
     st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
 c3, c4 = st.columns(2, gap="medium")

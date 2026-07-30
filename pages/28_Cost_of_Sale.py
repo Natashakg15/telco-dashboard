@@ -73,9 +73,14 @@ k1, k2, k3, k4 = st.columns(4)
 k1.metric("Total Cost of Sales", f"R{cos_this:,.0f}", delta=f"R{cos_this-cos_last:+,.0f} vs last month")
 k2.metric("CoS as % of Revenue", f"{cos_pct_this:.1f}%", delta=f"{cos_pct_this-cos_pct_last:+.1f}pp vs last month",
           delta_color="inverse")
-k3.metric("SIM Cost per Activation", f"R{sim_this:,.2f}", delta=f"R{sim_this-sim_last:+.2f} vs last month",
-          delta_color="inverse", help="(SIM Kitting Costs + uConnect Sim Stock) ÷ Snowflake activation count. "
-                                       "These GL lines sit under Acquisition Cost, not Cost of Sales.")
+k3.metric(
+    "SIM Cost per Activation",
+    f"R{sim_this:,.2f}" if pd.notna(sim_this) else "—",
+    delta=f"R{sim_this - sim_last:+.2f} vs last month" if pd.notna(sim_this) and pd.notna(sim_last) else None,
+    delta_color="inverse",
+    help="(SIM Kitting Costs + uConnect Sim Stock) ÷ Snowflake activation count. "
+         "These GL lines sit under Acquisition Cost, not Cost of Sales.",
+)
 k4.metric("Airtime CoS", f"R{air_this:,.0f}", delta=f"R{air_this-air_last:+,.0f} vs last month",
           delta_color="inverse", help="Voice_uConnect + Data_uConnect + Voice_credits + Data credits")
 

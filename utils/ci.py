@@ -33,6 +33,13 @@ ON_DARK_TEXT   = "#ffffff"
 # Chart colour sequence (rotate through these for multi-series charts).
 CHART_PALETTE = [HIGHVOLT_ORANGE, HYPERMINT, SONIC_BLUE, ULTRAVIOLET, "#a0a0a0"]
 
+def hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """'#13f460', 0.15 -> 'rgba(19,244,96,0.15)'. Plotly's color validators reject
+    8-digit alpha-suffixed hex (e.g. '#13f46026'), only rgba()/rgb()/6-digit hex."""
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
 # ── Card / surface shades ─────────────────────────────────────────────────────
 PAGE_BG   = "#f0f1f4"   # page canvas (was INKCORE, dark)
 SURFACE_1 = "#ffffff"   # card / chart background (was dark #1a1a1a)

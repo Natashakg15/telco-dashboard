@@ -1,0 +1,27 @@
+name: Deploy Telco Dashboard (static)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "web/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: web
+          publish_branch: gh-pages
+          keep_files: false
+          commit_message: "chore: deploy telco dashboard [${{ github.run_number }}]"

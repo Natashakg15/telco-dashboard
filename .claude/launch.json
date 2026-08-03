@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "streamlit", "run", "app.py", "--server.port", "8501", "--server.headless", "true"],
       "port": 8501
+    },
+    {
+      "name": "telco-dashboard-web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8502", "--directory", "web"],
+      "port": 8502
     }
   ]
 }

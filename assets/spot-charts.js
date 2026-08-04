@@ -170,6 +170,31 @@ function spotAreaLine(elId, x, y, title, colour) {
   }], baseLayout(title), PLOTLY_CFG);
 }
 
+function spotActivationCombo(elId, x, counts, pcts, title, showLegend) {
+  const layout = baseLayout(title);
+  layout.yaxis.title = { text: 'Activations', font: { color: PALETTE.sonicBlue, size: 11 } };
+  layout.yaxis.tickfont = { color: PALETTE.sonicBlue };
+  layout.yaxis2 = {
+    title: { text: 'Active 1 %', font: { color: PALETTE.hypermint, size: 11 } },
+    overlaying: 'y', side: 'right', showgrid: false, tickformat: '.0f',
+    ticksuffix: '%', tickfont: { color: PALETTE.hypermint }, range: [0, 105],
+  };
+  layout.hovermode = 'x unified';
+  if (showLegend !== false) {
+    layout.legend = { orientation: 'h', y: 1.08, font: { color: PALETTE.zeroWhite, size: 11 }, bgcolor: 'rgba(0,0,0,0)' };
+  } else {
+    layout.showlegend = false;
+  }
+  Plotly.newPlot(elId, [
+    { x, y: counts, type: 'bar', name: 'Daily Activations', yaxis: 'y1',
+      marker: { color: PALETTE.sonicBlue, line: { width: 0 } },
+      hovertemplate: '%{x}<br><b>Activations: %{y:,}</b><extra></extra>' },
+    { x, y: pcts.map(p => Math.round(p * 1000) / 10), type: 'scatter', mode: 'lines+markers', name: 'Active 1 %', yaxis: 'y2',
+      line: { color: PALETTE.hypermint, width: 2 }, marker: { size: 5, color: PALETTE.hypermint },
+      hovertemplate: '%{x}<br><b>Active 1 %: %{y:.1f}%</b><extra></extra>' },
+  ], layout, PLOTLY_CFG);
+}
+
 function spotPie(elId, labels, values, title) {
   Plotly.newPlot(elId, [{
     labels, values, type: 'pie', hole: 0.45,
@@ -253,6 +278,103 @@ function renderLeagueTable(rows, accentColour, caption, valueLabel) {
         <tbody>${body}</tbody>
       </table>
     </div>`;
+}
+
+// ── Tenant scorecard — shared renderer for pages 03-10 ──────────────────────
+function renderScorecard(data) {
+  const monthly = data.monthly;
+  const thisMonth = monthly.length ? monthly[monthly.length - 1].activations : 0;
+  const lastMonth = monthly.length >= 2 ? monthly[monthly.length - 2].activations : 0;
+  const q = data.quality;
+
+  const kpis = [
+    { label: 'This Month', value: fmtNum(thisMonth) },
+    { label: 'Last Month', value: fmtNum(lastMonth), delta: thisMonth - lastMonth },
+    { label: 'Active 1 %', value: q.active_1_pct != null ? fmtPct(q.active_1_pct) : '—' },
+    { label: 'SIMs Never Used (35-60d)', value: fmtNum(q.sims_never_used || 0) },
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(t => {
+    let deltaHtml = '';
+    if (t.delta !== undefined) {
+      const cls = t.delta >= 0 ? 'up' : 'down';
+      deltaHtml = `<div class="kpi-delta ${cls}">${t.delta >= 0 ? '+' : ''}${fmtNum(t.delta)}</div>`;
+    }
+    return `<div class="kpi-tile"><div class="kpi-label">${t.label}</div><div class="kpi-value">${t.value}</div>${deltaHtml}</div>`;
+  }).join('') +
+  `<div class="placeholder-card"><div class="p-label">QOS 7-Day Avg</div><div class="p-dash">—</div><div class="p-source">Pending: <span>NEW QOS table</span></div></div>` +
+  (data.ros_7day != null
+    ? (() => {
+        const atRisk = data.ros_7day < data.ros_threshold;
+        return `<div class="kpi-tile"><div class="kpi-label">ROS 7-Day Avg</div><div class="kpi-value">${data.ros_7day.toFixed(2)}</div>
+          <div class="kpi-delta ${atRisk ? 'down' : 'up'}">${atRisk ? 'Below threshold' : 'On target'}</div></div>`;
+      })()
+    : `<div class="placeholder-card"><div class="p-label">ROS 7-Day Avg</div><div class="p-dash">—</div><div class="p-source">Pending: <span>ROS_L7 DAYS SQL — not built for this tenant</span></div></div>`);
+
+  if (data.wastage_rate != null) {
+    const cost = (q.sims_never_used || 0) * data.wastage_rate + 6;
+    document.getElementById('wastageRow').innerHTML =
+      `<div class="kpi-tile" style="max-width:260px;"><div class="kpi-label">Cost of Wastage</div><div class="kpi-value">${fmtCurrency(cost)}</div></div>`;
+  }
+
+  if (data.daily.length) {
+    const dates = data.daily.map(r => toDate(r.date));
+    const dense = denseDateRange(data.daily.map(r => r.date));
+    const byDate = {};
+    data.daily.forEach(r => { byDate[r.date] = r.activations; });
+    const series = dense.map(d => ({ date: d, value: byDate[dateStr(d)] || 0 }));
+    const rolling = rollingAvg(series, 7);
+    spotCombo('dailyChart', rolling.map(r => fmtDay(r.date)),
+      { name: 'Daily Activations', y: rolling.map(r => r.value), color: PALETTE.sonicBlue },
+      { name: '7-Day Avg', y: rolling.map(r => r.rolling), color: PALETTE.hypermint },
+      `Daily Activations & 7-Day Rolling Avg — ${data.name} (90 Days)`);
+  } else {
+    document.getElementById('dailyChart').outerHTML =
+      `<div class="placeholder-chart" style="height:310px;"><div class="p-title">Daily Activations — ${data.name}</div><div class="p-pending">No data yet</div></div>`;
+  }
+
+  if (monthly.length) {
+    spotBar('monthlyChart', monthly.map(r => fmtMonth(toDate(r.month))), monthly.map(r => r.activations),
+      `Monthly Activations — ${data.name} (13 Months)`, PALETTE.highvolt);
+  }
+
+  const storeRows = data.stores.map((r, i) => {
+    const delta = r.this_month - r.last_month;
+    return `<tr><td class="rank">${i + 1}</td><td>${r.tenant}</td>
+      <td class="num" style="color:var(--hypermint);">${fmtNum(r.this_month)}</td>
+      <td class="num" style="color:var(--sonic-blue);">${fmtNum(r.last_month)}</td>
+      <td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
+  }).join('');
+  document.getElementById('storeTable').innerHTML = data.stores.length ? `
+    <table class="league">
+      <thead><tr><th>#</th><th>Tenant</th><th class="num">This Month</th><th class="num">Last Month</th>
+        <th class="num">QOS 7D Avg</th><th class="num">ROS 7D Avg</th><th class="num">Avg Vouchers</th></tr></thead>
+      <tbody>${storeRows}</tbody>
+    </table>` : '<p class="section-sub">No store data available for the current period.</p>';
+}
+
+// ── Activation/Utilisation grid — bar+line combo per tenant group, no legend ──
+function renderActivationGrid(elId, groups, cols) {
+  cols = cols || 2;
+  const container = document.getElementById(elId);
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  container.style.gap = '16px';
+  groups.forEach((g, i) => {
+    const chartId = `activation-grid-${i}`;
+    const box = document.createElement('div');
+    box.className = 'chart-box';
+    box.style.height = '300px';
+    box.id = chartId;
+    container.appendChild(box);
+    if (!g.daily.length) {
+      box.classList.remove('chart-box');
+      box.classList.add('placeholder-chart');
+      box.innerHTML = `<div class="p-title">${g.label}</div><div class="p-pending">No activations in the last 30 days</div>`;
+      return;
+    }
+    const x = g.daily.map(r => fmtDay(toDate(r.date)));
+    spotActivationCombo(chartId, x, g.daily.map(r => r.activations), g.daily.map(r => r.active1_pct), g.label, false);
+  });
 }
 
 // ── Placeholder page — for pages whose data source isn't available via MCP ──

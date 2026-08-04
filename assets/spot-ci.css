@@ -106,6 +106,27 @@ table.league tbody td.num { text-align: right; font-weight: 600; }
 .pill-red { background: rgba(244,70,16,0.1); color: var(--highvolt); }
 .pill-green { background: rgba(19,244,96,0.14); color: #0a7d38; }
 
+.placeholder-card {
+  background: var(--surface-1); border: 1px dashed var(--border); border-radius: 10px;
+  padding: 18px 16px; text-align: center; min-height: 90px;
+}
+.placeholder-card .p-label {
+  color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;
+}
+.placeholder-card .p-dash { color: #444; font-size: 22px; font-weight: 700; }
+.placeholder-card .p-source { color: #3a3a3a; font-size: 10px; margin-top: 6px; }
+.placeholder-card .p-source span { color: var(--highvolt); }
+
+.placeholder-chart {
+  background: var(--surface-1); border: 1px dashed var(--border); border-radius: 10px;
+  padding: 24px 20px; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; text-align: center;
+}
+.placeholder-chart .p-title { color: var(--zero-white); font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.placeholder-chart .p-pending { color: #555; font-size: 12px; }
+.placeholder-chart .p-source { color: var(--highvolt); font-size: 11px; margin-top: 6px; }
+.note-banner { color: #666; font-size: 12px; margin-bottom: 16px; }
+
 footer {
   margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border);
   display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;

@@ -139,6 +139,66 @@ function spotCombo(elId, x, barSeries, lineSeries, title) {
   Plotly.newPlot(elId, traces, layout, PLOTLY_CFG);
 }
 
+function spotDualAxis(elId, x, barSeries, lineSeries, title) {
+  const traces = [
+    { x, y: barSeries.y, type: 'bar', name: barSeries.name, yaxis: 'y',
+      marker: { color: barSeries.color, line: { width: 0 } },
+      hovertemplate: '%{x}<br><b>%{y:,}</b><extra></extra>' },
+    { x, y: lineSeries.y, type: 'scatter', mode: 'lines+markers', name: lineSeries.name, yaxis: 'y2',
+      line: { color: lineSeries.color, width: 2 }, marker: { size: 4 },
+      hovertemplate: '%{x}<br><b>%{y:,.0f}</b><extra></extra>' },
+  ];
+  const layout = baseLayout(title);
+  layout.yaxis.title = { text: barSeries.name, font: { color: barSeries.color, size: 11 } };
+  layout.yaxis2 = { overlaying: 'y', side: 'right', showgrid: false,
+    title: { text: lineSeries.name, font: { color: lineSeries.color, size: 11 } } };
+  layout.legend = { orientation: 'h', y: 1.1, font: { color: PALETTE.zeroWhite, size: 11 }, bgcolor: 'rgba(0,0,0,0)' };
+  Plotly.newPlot(elId, traces, layout, PLOTLY_CFG);
+}
+
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function spotAreaLine(elId, x, y, title, colour) {
+  Plotly.newPlot(elId, [{
+    x, y, type: 'scatter', mode: 'lines+markers', line: { color: colour, width: 2 },
+    fill: 'tozeroy', fillcolor: hexToRgba(colour, 0.1), marker: { color: colour, size: 5 },
+    hovertemplate: '%{x}<br><b>%{y:,}</b><extra></extra>',
+  }], baseLayout(title), PLOTLY_CFG);
+}
+
+function spotPie(elId, labels, values, title) {
+  Plotly.newPlot(elId, [{
+    labels, values, type: 'pie', hole: 0.45,
+    marker: { colors: CHART_PALETTE },
+    textfont: { size: 11 },
+    hovertemplate: '%{label}<br><b>%{value:,} (%{percent})</b><extra></extra>',
+  }], {
+    title: { text: title, font: { color: PALETTE.zeroWhite, size: 14 }, x: 0 },
+    paper_bgcolor: PALETTE.surface1, plot_bgcolor: PALETTE.surface1,
+    font: { color: '#888', size: 11 }, margin: { l: 8, r: 8, t: 40, b: 8 },
+    legend: { orientation: 'h', y: -0.1, font: { color: PALETTE.zeroWhite, size: 11 }, bgcolor: 'rgba(0,0,0,0)' },
+  }, PLOTLY_CFG);
+}
+
+function spotHBar(elId, y, x, title, colour) {
+  Plotly.newPlot(elId, [{
+    y, x, type: 'bar', orientation: 'h',
+    marker: { color: colour, line: { width: 0 } },
+    hovertemplate: '%{y}<br><b>%{x:,}</b><extra></extra>',
+  }], {
+    title: { text: title, font: { color: PALETTE.zeroWhite, size: 14 }, x: 0 },
+    paper_bgcolor: PALETTE.surface1, plot_bgcolor: PALETTE.surface1,
+    font: { color: '#888', size: 11 }, margin: { l: 8, r: 8, t: 40, b: 8 },
+    xaxis: { showgrid: true, gridcolor: PALETTE.border, tickformat: ',' },
+    yaxis: { showgrid: false, autorange: 'reversed' },
+    bargap: 0.3,
+  }, PLOTLY_CFG);
+}
+
 function renderKpiRow(elId, tiles) {
   // tiles: [{label, value, delta}] — delta optional (number, +/- rendered)
   document.getElementById(elId).innerHTML = tiles.map(t => {
@@ -193,6 +253,42 @@ function renderLeagueTable(rows, accentColour, caption, valueLabel) {
         <tbody>${body}</tbody>
       </table>
     </div>`;
+}
+
+// ── Placeholder page — for pages whose data source isn't available via MCP ──
+function renderPlaceholderPage(config) {
+  // config: {title, badge, kpis: [{label, source}], chartRows: [[{title, source, height}]], note}
+  document.querySelector('.badge-pill.page-badge').textContent = config.badge;
+  document.querySelector('h2.page-title').textContent = config.title;
+  document.title = config.title + ' | Telco Retail';
+
+  const body = document.getElementById('placeholderBody');
+  let html = '';
+  if (config.note) html += `<p class="note-banner">${config.note}</p>`;
+
+  if (config.kpis && config.kpis.length) {
+    html += `<div class="kpi-row" style="grid-template-columns:repeat(${config.kpis.length}, 1fr);">`;
+    html += config.kpis.map(k => `
+      <div class="placeholder-card">
+        <div class="p-label">${k.label}</div>
+        <div class="p-dash">—</div>
+        <div class="p-source">Pending: <span>${k.source}</span></div>
+      </div>`).join('');
+    html += `</div>`;
+  }
+
+  (config.chartRows || []).forEach(row => {
+    html += `<div class="grid-2" style="margin-bottom:16px; grid-template-columns:repeat(${row.length}, 1fr);">`;
+    html += row.map(c => `
+      <div class="placeholder-chart" style="height:${c.height || 300}px;">
+        <div class="p-title">${c.title}</div>
+        <div class="p-pending">Chart pending data access</div>
+        <div class="p-source">Source: ${c.source}</div>
+      </div>`).join('');
+    html += `</div>`;
+  });
+
+  body.innerHTML = html;
 }
 
 // ── Tenant grouping — mirrors utils' map_tenant_group Python logic exactly ──

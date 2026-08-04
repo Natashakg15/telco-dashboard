@@ -280,6 +280,94 @@ function renderLeagueTable(rows, accentColour, caption, valueLabel) {
     </div>`;
 }
 
+// ── Subscription billing page — shared renderer for pages 14, 45-48 ─────────
+function renderSubscriptionBillingPage(data) {
+  const k = data.kpis;
+  const pct = v => (v == null || isNaN(v)) ? '—' : fmtPct(v, 2);
+  document.getElementById('kpiRow1').innerHTML = [
+    { label: 'Subscription Book', value: fmtNum(k.book_size) },
+    { label: 'FTC %', value: pct(k.ftc_pct) },
+    { label: 'Month 2 %', value: pct(k.month2_pct) },
+  ].map(t => `<div class="kpi-tile"><div class="kpi-label">${t.label}</div><div class="kpi-value">${t.value}</div></div>`).join('');
+
+  if (data.monthly.length) {
+    spotLine('monthlyTrend', data.monthly.map(r => fmtMonth(toDate(r.month))),
+      [{ name: 'Sales', y: data.monthly.map(r => r.sales), color: PALETTE.hypermint }], 'Monthly trend of new sales');
+  } else {
+    document.getElementById('monthlyTrend').outerHTML = phBox('Monthly trend of new sales', 'No sales in window', 260);
+  }
+  if (data.daily.length) {
+    spotLine('dailyTrend', data.daily.map(r => fmtDay(toDate(r.date))),
+      [{ name: 'Sales', y: data.daily.map(r => r.sales), color: PALETTE.sonicBlue }], 'Daily trend of new sales');
+  } else {
+    document.getElementById('dailyTrend').outerHTML = phBox('Daily trend of new sales', 'No sales in last 30 days', 260);
+  }
+
+  if (data.collected.length) {
+    const months = [...new Set(data.collected.map(r => r.month))].sort();
+    const deals = [...new Set(data.collected.map(r => r.deal))];
+    const series = deals.map((deal, i) => ({
+      name: deal, color: CHART_PALETTE[i % CHART_PALETTE.length],
+      y: months.map(m => (data.collected.find(r => r.month === m && r.deal === deal) || { billed: 0 }).billed),
+    }));
+    spotStackedBar('collectedChart', months.map(m => fmtMonth(toDate(m))), series, 'Collected book trend via card');
+  } else {
+    document.getElementById('collectedChart').outerHTML = phBox('Collected book trend via card', 'No billing data in window', 320);
+  }
+
+  document.getElementById('kpiRow2').innerHTML = [
+    { label: 'Sales Yesterday', value: fmtNum(k.sales_yday) },
+    { label: 'Sales MTD', value: fmtNum(k.sales_mtd) },
+    { label: 'Sales L30 Days', value: fmtNum(k.sales_l30) },
+    { label: 'L7 Day Avg', value: (k.sales_l7 / 7).toFixed(2) },
+  ].map(t => `<div class="kpi-tile"><div class="kpi-label">${t.label}</div><div class="kpi-value">${t.value}</div></div>`).join('');
+
+  document.getElementById('dealsYday').innerHTML = dealTableHtml(data.deals_yday);
+  document.getElementById('dealsL30').innerHTML = dealTableHtml(data.deals_l30);
+}
+
+function phBox(title, msg, height) {
+  return `<div class="placeholder-chart" style="height:${height}px;"><div class="p-title">${title}</div><div class="p-pending">${msg}</div></div>`;
+}
+
+function dealTableHtml(rows) {
+  if (!rows.length) return '<p class="section-sub">No sales in this window.</p>';
+  const body = rows.map(r => `<tr><td>${r.deal}</td><td class="num">${fmtNum(r.sales)}</td></tr>`).join('');
+  return `<table class="league"><thead><tr><th>Product</th><th class="num">Sales</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+// ── App subscription page — shared renderer for page 44 ─────────────────────
+function renderAppSubscriptionPage(data) {
+  const k = data.kpis;
+  document.getElementById('kpiRow1').innerHTML = [
+    { label: 'Active Registered App Users', value: fmtNum(k.active_users) },
+    { label: 'Book Size', value: fmtNum(k.book_size) },
+    { label: 'FTC %', value: k.ftc_pct ? fmtPct(k.ftc_pct, 2) : '—' },
+  ].map(t => `<div class="kpi-tile"><div class="kpi-label">${t.label}</div><div class="kpi-value">${t.value}</div></div>`).join('');
+
+  spotLine('monthlyTrend', data.monthly.map(r => fmtMonth(toDate(r.month))),
+    [{ name: 'Sales', y: data.monthly.map(r => r.sales), color: PALETTE.hypermint }], 'Monthly trend of new sales from app');
+  spotLine('dailyTrend', data.daily.map(r => fmtDay(toDate(r.date))),
+    [{ name: 'Sales', y: data.daily.map(r => r.sales), color: PALETTE.sonicBlue }], 'Daily trend of new sales from app');
+
+  if (data.deals_l30.length) {
+    spotHBar('collectedChart', data.deals_l30.map(r => r.deal), data.deals_l30.map(r => r.sales),
+      'Collected book trend via card', CHART_PALETTE[0]);
+  } else {
+    document.getElementById('collectedChart').outerHTML = phBox('Collected book trend via card', 'No data in window', 340);
+  }
+
+  document.getElementById('kpiRow2').innerHTML = [
+    { label: 'Sales Yesterday', value: fmtNum(k.sales_yday) },
+    { label: 'Sales MTD', value: fmtNum(k.sales_mtd) },
+    { label: 'Sales L30 Days', value: fmtNum(k.sales_l30) },
+    { label: 'L7 Day Avg', value: (k.sales_l7 / 7).toFixed(2) },
+  ].map(t => `<div class="kpi-tile"><div class="kpi-label">${t.label}</div><div class="kpi-value">${t.value}</div></div>`).join('');
+
+  document.getElementById('dealsYday').innerHTML = dealTableHtml(data.deals_yday);
+  document.getElementById('dealsL30').innerHTML = dealTableHtml(data.deals_l30);
+}
+
 // ── Tenant scorecard — shared renderer for pages 03-10 ──────────────────────
 function renderScorecard(data) {
   const monthly = data.monthly;

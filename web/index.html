@@ -74,6 +74,21 @@ const LIVE_PAGES = {
   "Voice Usage by Tenant": "pages/38-voice-usage-tenant.html",
   "Data Usage by Tenant": "pages/39-data-usage-tenant.html",
   "Retain Users via Free Airtime": "pages/40-retain-users-airtime.html",
+  "Quality of Sales by Tenant & Store": "pages/02-quality-of-sales.html",
+  "New SIM Activations & Utilisation 1": "pages/11-sim-activations-1.html",
+  "New SIM Activations & Utilisation 2": "pages/41-sim-activations-2.html",
+  "New SIM Activations & Utilisation 3": "pages/42-sim-activations-3.html",
+  "New SIM Activations & Utilisation 4": "pages/43-sim-activations-4.html",
+  "Trading Store Trend": "pages/12-trading-store-trend.html",
+  "Pipeline & Provisional Commissions": "pages/13-pipeline-commissions.html",
+  "Spar": "pages/03-spar-scorecard.html",
+  "Build It": "pages/04-build-it-scorecard.html",
+  "Mica": "pages/05-mica-scorecard.html",
+  "Pet Pool & Home": "pages/06-pet-pool-scorecard.html",
+  "Aheers": "pages/07-aheers-scorecard.html",
+  "Fashion Fusion": "pages/08-fashion-fusion-scorecard.html",
+  "Progas": "pages/09-progas-scorecard.html",
+  "Midas": "pages/10-midas-scorecard.html",
 };
 
 const SECTIONS = [
@@ -114,6 +129,10 @@ const SECTIONS = [
 
 function pageItemHtml(p) {
   if (typeof p === 'object') {
+    const bare = p.sub.replace(/^↳\s*/, '');
+    if (LIVE_PAGES[bare]) {
+      return `<li class="sub"><a href="${LIVE_PAGES[bare]}" style="color:var(--zero-white);">${p.sub}</a></li>`;
+    }
     return `<li class="sub">${p.sub}</li>`;
   }
   if (p === "Scorecards") {
